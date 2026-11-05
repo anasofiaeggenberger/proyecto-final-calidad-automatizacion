@@ -2,76 +2,259 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Cola de Pacientes</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/css/styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <meta name="description" content="Dashboard de gestión de pacientes hospitalarios">
+    <title>Cola hospitalaria | Gestión de pacientes</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-    <header>
-        <nav>
-            <ul>
-                <li><a href="/">Inicio</a></li>
-                <li><a href="{{ url_for('sinestructura') }}">Sin Estructura</a></li>
-                <li><a href="#agregar">Agregar Paciente</a></li>
-                <li><a href="#lista">Lista de Pacientes</a></li>
-            </ul>
-        </nav>
-    </header>
+    <a class="skip-link" href="#main-content">Saltar al contenido principal</a>
 
-    <main>
-        <section id="agregar">
-            <h1>Cola de Pacientes (Prioridad)</h1>
-            <form action="/agregar" method="POST">
-                <label for="nombre">Nombre del Paciente:</label>
-                <input type="text" id="nombre" name="nombre" placeholder="Nombre del paciente" required>
-                
-                <label for="prioridad">Prioridad:</label>
-                <input type="number" id="prioridad" name="prioridad" placeholder="Prioridad (1 es urgente)" required>
-                
-                <button type="submit"><i class="fas fa-plus"></i> Agregar Paciente</button>
-            </form>
-        </section>
+    <div class="app-shell">
+        <header class="site-header">
+            <div class="container header-inner">
+                <a class="brand" href="{{ url_for('index') }}" data-testid="app-brand" aria-label="Inicio de Cola hospitalaria">
+                    <span class="brand-mark" aria-hidden="true">+</span>
+                    <span class="brand-copy">
+                        <strong>Cola hospitalaria</strong>
+                        <small>Gestión de atención</small>
+                    </span>
+                </a>
 
-        <section id="atender" style="margin-top: 2em;">
-            <form action="/atender" method="POST">
-                <button type="submit"><i class="fas fa-check"></i> Atender Siguiente Paciente</button>
-            </form>
-        </section>
+                <nav class="primary-nav" aria-label="Navegación principal">
+                    <a href="#register">Registrar paciente</a>
+                    <a href="#queue">Ver cola</a>
+                </nav>
+            </div>
+        </header>
 
-        <section id="lista" style="margin-top: 2em;">
-            <h2>Lista Actual:</h2>
-            <ul id="pacientes-lista">
-                {% if pacientes %}
-                    {% for paciente in pacientes %}
-                        <li data-id="{{ paciente.id }}">
-                            <strong>{{ paciente.nombre }}</strong> - Prioridad: {{ paciente.prioridad }}
-                            <form action="/eliminar/{{ paciente.nombre }}" method="POST" style="display: inline;">
+        <main id="main-content" class="main-content">
+            <div class="container">
+                <section class="page-intro" aria-labelledby="page-title">
+                    <div>
+                        <p class="eyebrow">Panel operativo</p>
+                        <h1 id="page-title">Atención de pacientes</h1>
+                        <p class="page-description">
+                            Organiza la atención hospitalaria por nivel de urgencia y respeta el orden de llegada.
+                        </p>
+                    </div>
+                    <div class="system-status" data-testid="system-status">
+                        <span class="status-dot" aria-hidden="true"></span>
+                        <span>Sistema activo</span>
+                    </div>
+                </section>
 
-                                <button type="submit" class="delete-btn"><i class="fas fa-trash"></i> Eliminar</button>
-                            </form>
-                        </li>
-                    {% endfor %}
-                {% else %}
-                    <p>No hay pacientes en la lista.</p>
-                {% endif %}
-            </ul>
-        </section>
-    </main>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <section class="flash-region" aria-label="Mensajes del sistema" aria-live="polite">
+                            {% for category, message in messages %}
+                                <div
+                                    class="flash flash--{{ category }}"
+                                    data-testid="flash-message"
+                                    data-category="{{ category }}"
+                                    role="{{ 'alert' if category == 'error' else 'status' }}"
+                                >
+                                    <span class="flash-icon" aria-hidden="true">
+                                        {{ '!' if category == 'error' else ('✓' if category == 'success' else 'i') }}
+                                    </span>
+                                    <p>{{ message }}</p>
+                                </div>
+                            {% endfor %}
+                        </section>
+                    {% endif %}
+                {% endwith %}
 
-    <footer style="margin-top: 2em; text-align: center;">
-        <p>&copy; 2023 Cola de Pacientes. Todos los derechos reservados.</p>
-    </footer>
+                <section class="summary-grid" aria-label="Resumen de la cola">
+                    <article class="summary-card summary-card--primary" data-testid="summary-total">
+                        <div class="summary-icon" aria-hidden="true">◷</div>
+                        <div>
+                            <p class="summary-label">Pacientes en espera</p>
+                            <p class="summary-value">{{ total_pacientes }}</p>
+                            <p class="summary-detail">En la cola actual</p>
+                        </div>
+                    </article>
 
-    <script>
-        // Confirmación antes de eliminar un paciente
-        document.querySelectorAll('.delete-btn').forEach(button => {
-            button.addEventListener('click', function(event) {
-                if (!confirm('¿Estás seguro de que deseas eliminar este paciente?')) {
-                    event.preventDefault();
-                }
-            });
-        });
-    </script>
+                    <article class="summary-card" data-testid="summary-next">
+                        <div class="summary-icon summary-icon--teal" aria-hidden="true">→</div>
+                        <div>
+                            <p class="summary-label">Próximo paciente</p>
+                            {% if proximo_paciente %}
+                                <p class="summary-value summary-value--name" data-testid="next-patient-name">{{ proximo_paciente.nombre }}</p>
+                                <p class="summary-detail">Urgencia {{ proximo_paciente.prioridad }} · {{ urgency_labels[proximo_paciente.prioridad] }}</p>
+                            {% else %}
+                                <p class="summary-value summary-value--name">—</p>
+                                <p class="summary-detail">No hay pacientes pendientes</p>
+                            {% endif %}
+                        </div>
+                    </article>
+
+                    <article class="summary-card" data-testid="summary-urgent">
+                        <div class="summary-icon summary-icon--amber" aria-hidden="true">!</div>
+                        <div>
+                            <p class="summary-label">Atención prioritaria</p>
+                            <p class="summary-value">{{ pacientes_urgentes }}</p>
+                            <p class="summary-detail">Urgencia nivel 1 o 2</p>
+                        </div>
+                    </article>
+                </section>
+
+                <div class="dashboard-grid">
+                    <section id="register" class="panel registration-panel" aria-labelledby="register-title">
+                        <div class="section-heading">
+                            <div>
+                                <p class="eyebrow">Nueva admisión</p>
+                                <h2 id="register-title">Registrar paciente</h2>
+                            </div>
+                            <span class="section-number" aria-hidden="true">01</span>
+                        </div>
+
+                        <form action="{{ url_for('agregar') }}" method="post" class="patient-form" data-testid="register-form">
+                            <div class="form-field">
+                                <label for="nombre">Nombre completo</label>
+                                <input
+                                    type="text"
+                                    id="nombre"
+                                    name="nombre"
+                                    placeholder="Ej. María López"
+                                    autocomplete="name"
+                                    maxlength="120"
+                                    required
+                                    data-testid="patient-name-input"
+                                    aria-describedby="name-help"
+                                >
+                                <span id="name-help" class="field-help">Usa el nombre con el que se identificará al paciente.</span>
+                            </div>
+
+                            <div class="form-field">
+                                <label for="prioridad">Nivel de urgencia</label>
+                                <select id="prioridad" name="prioridad" required data-testid="priority-select" aria-describedby="priority-help">
+                                    <option value="" selected disabled>Selecciona un nivel</option>
+                                    {% for level, label in urgency_labels.items() %}
+                                        <option value="{{ level }}">{{ level }} · {{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                <span id="priority-help" class="field-help">1 requiere atención inmediata; 5 es la menor urgencia.</span>
+                            </div>
+
+                            <button type="submit" class="button button--primary" data-testid="register-patient-button">
+                                Registrar paciente
+                                <span class="button-arrow" aria-hidden="true">→</span>
+                            </button>
+                        </form>
+                    </section>
+
+                    <aside class="panel urgency-panel" aria-labelledby="urgency-title">
+                        <div class="section-heading">
+                            <div>
+                                <p class="eyebrow">Criterio de atención</p>
+                                <h2 id="urgency-title">Escala de urgencia</h2>
+                            </div>
+                            <span class="section-number" aria-hidden="true">02</span>
+                        </div>
+                        <ul class="urgency-list" data-testid="urgency-legend">
+                            {% for level, label in urgency_labels.items() %}
+                                <li>
+                                    <span class="urgency-badge urgency-badge--{{ level }}">{{ level }}</span>
+                                    <span>{{ label }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        <p class="panel-note">Los pacientes se atienden desde el nivel más urgente. Si hay empate, se respeta el orden de registro.</p>
+                    </aside>
+                </div>
+
+                <section id="queue" class="panel queue-panel" aria-labelledby="queue-title">
+                    <div class="section-heading section-heading--queue">
+                        <div>
+                            <p class="eyebrow">Seguimiento en tiempo real</p>
+                            <h2 id="queue-title">Pacientes en espera</h2>
+                        </div>
+                        <form action="{{ url_for('atender') }}" method="post">
+                            <button type="submit" class="button button--secondary" data-testid="attend-next-button">
+                                Atender siguiente
+                                <span class="button-arrow" aria-hidden="true">→</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    {% if pacientes %}
+                        <div class="table-wrapper">
+                            <table class="patient-table" data-testid="patient-table">
+                                <caption class="visually-hidden">Pacientes ordenados por urgencia y orden de llegada</caption>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Orden</th>
+                                        <th scope="col">Paciente</th>
+                                        <th scope="col">Urgencia</th>
+                                        <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for paciente in pacientes %}
+                                        <tr
+                                            class="patient-row{% if loop.first %} patient-row--next{% endif %}"
+                                            data-testid="patient-row"
+                                            data-patient-name="{{ paciente.nombre }}"
+                                            data-priority="{{ paciente.prioridad }}"
+                                        >
+                                            <td data-label="Orden">
+                                                <span class="queue-position">{{ '%02d'|format(loop.index) }}</span>
+                                            </td>
+                                            <td data-label="Paciente">
+                                                <div class="patient-name">{{ paciente.nombre }}</div>
+                                                {% if loop.first %}
+                                                    <span class="next-label">Próximo en atender</span>
+                                                {% endif %}
+                                            </td>
+                                            <td data-label="Urgencia">
+                                                <span class="urgency-badge urgency-badge--{{ paciente.prioridad }}">
+                                                    Nivel {{ paciente.prioridad }} · {{ urgency_labels[paciente.prioridad] }}
+                                                </span>
+                                            </td>
+                                            <td class="table-action" data-label="Acciones">
+                                                <form
+                                                    action="{{ url_for('eliminar', nombre=paciente.nombre) }}"
+                                                    method="post"
+                                                    onsubmit="return window.confirm('¿Deseas retirar a este paciente de la cola?');"
+                                                >
+                                                    <button
+                                                        type="submit"
+                                                        class="button button--danger"
+                                                        data-testid="delete-patient-button"
+                                                        aria-label="Eliminar a {{ paciente.nombre }} de la cola"
+                                                    >
+                                                        Eliminar
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="empty-state" data-testid="empty-state" role="status">
+                            <div class="empty-icon" aria-hidden="true">＋</div>
+                            <h3>La cola está vacía</h3>
+                            <p>Registra un paciente para comenzar a organizar la atención.</p>
+                            <a href="#register" class="button button--secondary" data-testid="empty-state-register-link">Registrar paciente</a>
+                        </div>
+                    {% endif %}
+                </section>
+
+                <p class="workflow-note">
+                    <span class="workflow-note__icon" aria-hidden="true">i</span>
+                    La cola se ordena automáticamente por urgencia y conserva el orden de llegada en cada nivel.
+                </p>
+            </div>
+        </main>
+
+        <footer class="site-footer">
+            <div class="container footer-inner">
+                <span>Cola hospitalaria</span>
+                <span>Gestión de pacientes · Uso interno</span>
+            </div>
+        </footer>
+    </div>
 </body>
 </html>

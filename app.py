@@ -1,67 +1,106 @@
-from flask import Flask, render_template, request, redirect, url_for
-from paciente import agregar_paciente, obtener_pacientes_ordenados, atender_paciente, eliminar_paciente
-from pacientes_sin_estructura import insertar_paciente as sin_insertar, atender_paciente as sin_atender, mostrar_cola
+import os
 
-import sys
-from io import StringIO
+from flask import Flask, flash, redirect, render_template, request, url_for
+
+from paciente import (
+    agregar_paciente,
+    atender_paciente,
+    eliminar_paciente,
+    obtener_pacientes_ordenados,
+)
 
 app = Flask(__name__)
+app.config["SECRET_KEY"] = os.environ.get(
+    "FLASK_SECRET_KEY", "hospital-dashboard-development-key"
+)
 
-# --- Sistema con estructuras ---
+URGENCY_LABELS = {
+    1: "Crítica",
+    2: "Muy alta",
+    3: "Alta",
+    4: "Media",
+    5: "Baja",
+}
 
-@app.route('/')
-def index():
+
+def dashboard_context():
     pacientes = obtener_pacientes_ordenados()
-    return render_template('index.html', pacientes=pacientes)
+    return {
+        "pacientes": pacientes,
+        "total_pacientes": len(pacientes),
+        "pacientes_urgentes": sum(
+            1 for paciente in pacientes if paciente.prioridad in (1, 2)
+        ),
+        "proximo_paciente": pacientes[0] if pacientes else None,
+        "urgency_labels": URGENCY_LABELS,
+    }
 
-@app.route('/agregar', methods=['POST'])
+
+def validate_patient_form():
+    nombre = request.form.get("nombre", "").strip()
+    prioridad_input = request.form.get("prioridad", "").strip()
+
+    if not nombre:
+        return None, "Ingresa el nombre del paciente."
+
+    try:
+        prioridad = int(prioridad_input)
+    except (TypeError, ValueError):
+        return None, "Selecciona un nivel de urgencia válido del 1 al 5."
+
+    if prioridad not in URGENCY_LABELS:
+        return None, "Selecciona un nivel de urgencia válido del 1 al 5."
+
+    return (nombre, prioridad), None
+
+
+@app.route("/")
+def index():
+    return render_template("index.html", **dashboard_context())
+
+
+@app.route("/agregar", methods=["POST"])
 def agregar():
-    nombre = request.form['nombre']
-    prioridad = int(request.form['prioridad'])
+    patient_data, error = validate_patient_form()
+    if error:
+        flash(error, "error")
+        return redirect(url_for("index", _anchor="register"))
+
+    nombre, prioridad = patient_data
     agregar_paciente(nombre, prioridad)
-    return redirect(url_for('index'))
+    flash(
+        f"{nombre} fue registrado con urgencia {prioridad} · "
+        f"{URGENCY_LABELS[prioridad]}.",
+        "success",
+    )
+    return redirect(url_for("index", _anchor="queue"))
 
-@app.route('/atender', methods=['POST'])
+
+@app.route("/atender", methods=["POST"])
 def atender():
-    atender_paciente()
-    return redirect(url_for('index'))
+    paciente = atender_paciente()
+    if paciente:
+        flash(f"{paciente.nombre} fue atendido correctamente.", "success")
+    else:
+        flash("La cola está vacía. No hay pacientes por atender.", "info")
+    return redirect(url_for("index", _anchor="queue"))
 
-@app.route('/eliminar/', methods=['GET', 'POST'])
+
+@app.route("/eliminar/", methods=["GET", "POST"])
 def eliminar_default():
-    return redirect(url_for('index'))
+    return redirect(url_for("index", _anchor="queue"))
 
-@app.route('/eliminar/<nombre>', methods=['GET', 'POST'])
+
+@app.route("/eliminar/<nombre>", methods=["GET", "POST"])
 def eliminar(nombre):
     if eliminar_paciente(nombre):
+        flash(f"{nombre} fue eliminado de la cola.", "success")
         print(f"Paciente {nombre} eliminado definitivamente.")
     else:
+        flash(f"No se encontró a {nombre} en la cola.", "error")
         print(f"No se pudo eliminar al paciente {nombre}.")
-    return redirect(url_for('index'))
-
-# --- Sistema sin estructuras ---
-
-@app.route('/sinestructura')
-def sinestructura():
-    # Captura la salida impresa de mostrar_cola()
-    old_stdout = sys.stdout
-    sys.stdout = mystdout = StringIO()
-    mostrar_cola()
-    sys.stdout = old_stdout
-    salida = mystdout.getvalue()
-    return render_template('sinestructura.html', salida=salida, reporte=None)
-
-@app.route('/sinestructura/agregar', methods=['POST'])
-def sinestructura_agregar():
-    nombre = request.form['nombre']
-    urgencia = int(request.form['urgencia'])
-    sin_insertar(nombre, urgencia)
-    return redirect(url_for('sinestructura'))
-
-@app.route('/sinestructura/atender', methods=['POST'])
-def sinestructura_atender():
-    sin_atender()
-    return redirect(url_for('sinestructura'))
+    return redirect(url_for("index", _anchor="queue"))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
