@@ -1,0 +1,29 @@
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Herramientas de desarrollo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Sistema operativo y logs
+.DS_Store
+*.log
+
+# Configuración local y secretos
+.env
+.env.*
+!.env.example
+
+# Reportes generados por la aplicación
+reporte_pacientes.txt
+reporte_sin_estructuras.txt
