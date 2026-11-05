@@ -1,45 +1,36 @@
-# 🏥 Proyecto: Priority Queue en Hospital
+# Cola hospitalaria
 
-**Integrantes:**
-- Ana Sofía Eggenberger
-- Jan Ricica
+Dashboard Flask para gestionar la atención de pacientes mediante una cola de prioridad. La interfaz principal permite registrar, listar, atender y eliminar pacientes, mostrando primero los niveles de urgencia más altos y respetando el orden de llegada cuando existe empate.
 
-**Clase:** Estructura de Datos
-**Tema:** Implementación de *Priority Queue* para hospital
+## Funcionalidades actuales
 
-## Descripción
+- Registro de pacientes con urgencia del 1 al 5.
+- Listado ordenado por urgencia y FIFO dentro del mismo nivel.
+- Resumen de pacientes en espera, próximo paciente y atención prioritaria.
+- Atención del siguiente paciente.
+- Eliminación individual de pacientes.
+- Mensajes visibles para operaciones exitosas, validaciones y cola vacía.
+- Diseño responsive con HTML semántico y selectores `data-testid` preparados para futuras pruebas Playwright.
 
-Este proyecto simula la administración de pacientes en un hospital utilizando una **Priority Queue** como estructura de datos. También integra una interfaz web con Flask.
+La interfaz antigua “Sin Estructura” y sus rutas ya no forman parte de la aplicación web.
 
-Cada paciente se registra con un nivel de urgencia del **1 al 5**, donde 1 es la máxima prioridad médica y 5 la mínima.
-
-La aplicación conserva las interfaces existentes del proyecto original:
-
-- Interfaz web Flask con cola de pacientes y versión sin estructura, mediante `app.py`.
-- Menú de consola con priority queue, simulación y generación de reportes, mediante `main.py`.
-- Menú de consola alternativo sin estructuras, mediante `main_sin_estructuras.py`.
-
-## Estructura
+## Estructura principal
 
 ```text
 .
 ├── app.py
-├── main.py
-├── main_sin_estructuras.py
 ├── paciente.py
+├── main.py
 ├── paciente1.py
-├── pacientes_sin_estructura.py
 ├── priority_queue.py
 ├── simulacion.py
 ├── utils.py
 ├── requirements.txt
 ├── static/css/styles.css
-└── templates/
-    ├── index.html
-    └── sinestructura.html
+└── templates/index.html
 ```
 
-Los archivos `reporte_pacientes.txt` y `reporte_sin_estructuras.txt` son salidas generadas por la aplicación y no forman parte de los archivos fuente migrados.
+`app.py` es la entrada del dashboard web. `main.py` conserva el menú de consola existente y utiliza sus módulos de apoyo.
 
 ## Requisitos e instalación en macOS
 
@@ -52,33 +43,32 @@ source .venv/bin/activate
 uv pip install -r requirements.txt
 ```
 
-`uv python install 3.12` puede omitirse si Python 3.12 ya está disponible para `uv`.
+Si Python 3.12 ya está disponible para `uv`, puede omitirse `uv python install 3.12`.
 
 ## Ejecución
 
-Para iniciar la interfaz web Flask:
+Para iniciar el dashboard:
 
 ```bash
 source .venv/bin/activate
 python app.py
 ```
 
-Abrir <http://127.0.0.1:5000/> en el navegador. La ruta de la versión sin estructura es <http://127.0.0.1:5000/sinestructura/>.
+Abrir <http://127.0.0.1:5000/> en el navegador. Detener el servidor con `Ctrl+C`.
 
-Para ejecutar los menús de consola:
+El menú de consola puede iniciarse con:
 
 ```bash
 source .venv/bin/activate
 python main.py
-python main_sin_estructuras.py
 ```
 
 ## Procedencia y licencia
 
-El código fuente fue migrado de forma conservadora desde [anasofiaeggenberger/Proyecto-Priority-Queue](https://github.com/anasofiaeggenberger/Proyecto-Priority-Queue), clonado el 5 de noviembre de 2026 desde el commit `89fa05b` de `main`.
+El código base fue migrado de forma conservadora desde [anasofiaeggenberger/Proyecto-Priority-Queue](https://github.com/anasofiaeggenberger/Proyecto-Priority-Queue), commit `89fa05b` de `main`. Se conservaron los autores y avisos presentes en el README original.
 
-Se conservaron los autores y avisos presentes en el README original. El repositorio original no contiene un archivo `LICENSE`, `LICENSE.md`, `COPYING` ni `NOTICE`, y no declara una licencia formal; por tanto, este proyecto no infiere ni añade una licencia nueva. Si se requiere redistribución, debe confirmarse el permiso correspondiente con los titulares del código.
+El repositorio original no contiene `LICENSE`, `LICENSE.md`, `COPYING` ni `NOTICE`, y no declara una licencia formal. No se infiere ni añade una licencia nueva; cualquier redistribución debe confirmarse con los titulares del código.
 
-## Alcance de esta migración
+## Alcance
 
-Esta migración incorpora la base funcional existente sin refactorizar su arquitectura, cambiar sus rutas o agregar endpoints, pruebas o CI/CD. Las dependencias de ejecución declaradas son Flask, Werkzeug (fijado a una versión compatible con Flask 2.3.2) y colorama; `heapq` y `random` pertenecen a la biblioteca estándar de Python.
+Esta etapa se limita a la limpieza visual y funcional del dashboard. No incluye API JSON, CI/CD, Docker ni una suite completa de pruebas.
