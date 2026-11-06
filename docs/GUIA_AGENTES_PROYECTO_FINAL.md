@@ -5,15 +5,15 @@
 **Fecha oficial publicada:** 10 de noviembre de 2026, 14:29 (hora de Guatemala).
 **Equipo:** Ana Sofía, Juan Pablo y Víctor.
 
-> **Importante:** Este documento combina hechos observados en el repositorio, requisitos oficiales y decisiones **planificadas**. `docs/PLAN_TECNICO.md` es su documento técnico complementario; ambos se revisan juntos en `docs/test-strategy` y no implican que API, pruebas, Docker o Jenkins ya existan. Si existe una contradicción, prevalecen las instrucciones oficiales de https://github.com/danihrndzld/proyecto-final-calidad y se debe informar al equipo. No afirmar que algo está implementado si sólo está planificado.
+> **Importante:** Este documento combina hechos observados en el repositorio, requisitos oficiales y decisiones **planificadas**. `docs/PLAN_TECNICO.md` es su documento técnico complementario; ambos documentos ya fueron revisados e integrados en la rama main, y no implican que API, pruebas, Docker o Jenkins ya existan. Si existe una contradicción, prevalecen las instrucciones oficiales de https://github.com/danihrndzld/proyecto-final-calidad y se debe informar al equipo. No afirmar que algo está implementado si sólo está planificado.
 
 ## 1. Contexto y estado real
 
 Se reutiliza, con autorización de los autores, un proyecto académico de cola de prioridad hospitalaria: https://github.com/anasofiaeggenberger/Proyecto-Priority-Queue. La aplicación actual usa Python y Flask, plantillas HTML y CSS. Permite registrar pacientes con urgencia 1–5, ver la cola, atender al paciente más urgente y eliminar pacientes. En empates debe respetar el orden de llegada (FIFO). Se retiró la interfaz antigua «Sin Estructura» y se creó un dashboard visual renovado. La cola se almacena en memoria: se reinicia con el proceso y no debe tratarse como almacenamiento persistente.
 
-La migración y el rediseño ya están en la historia base de `main` (commit visible `1444470` en la revisión anterior). Las rutas HTML fueron comprobadas manualmente y Codex reportó validaciones básicas correctas. En la rama actual `docs/test-strategy` sólo se preparan documentos; **todavía no están implementadas las suites completas de pruebas, la API JSON ni el pipeline final.**
+La migración, el rediseño y la documentación técnica ya están integrados en la rama `main`. La aplicación web fue comprobada manualmente y Codex reportó validaciones básicas correctas. Todavía no están implementadas las suites completas de pruebas, la API JSON ni el pipeline final.
 
-Ana Sofía creó la rama `docs/test-strategy`. Los documentos pueden revisarse mediante PR desde esta rama; no es necesario esperar a que se publiquen en `main` para que cada responsable prepare trabajo independiente, pero sí deben aprobarse los contratos antes de implementar dependencias.
+Los documentos de planificación ya están publicados en `main` y son la referencia compartida para los tres integrantes. Cada responsable debe crear su propia rama a partir de la última versión de `main` y respetar los contratos y responsabilidades establecidos.
 
 ## 2. Archivos de la base conocida
 
@@ -59,7 +59,7 @@ Para la demo se debe mostrar un cambio real y reversible en código de aplicaci�
 - Mantener Python 3.12, Flask y el dashboard existente; no introducir frameworks innecesarios.
 - Refactorizar hacia servicio de dominio (`PatientService`) y cola aislable (`PatientQueue`) y una app factory (`create_app`) que reciba configuración/dependencias, **sin cambiar la semántica de prioridad/FIFO**.
 - Usar IDs únicos para pacientes, especialmente para eliminación: los nombres pueden repetirse.
-- Exponer la API JSON provisional unificada del plan: `GET /api/health`, `GET /api/pacientes`, `POST /api/pacientes`, `POST /api/pacientes/atender`, `DELETE /api/pacientes/<id>`. Usar `nombre`, `prioridad`, `id`, `orden_llegada`, `pacientes`, `proximo` y `total` sólo después de aprobar el contrato. Códigos HTTP, esquemas y validaciones se deben registrar antes de que Juan Pablo implemente.
+- **Contrato API aprobado para el desarrollo:** `GET /api/health`, `GET /api/pacientes`, `POST /api/pacientes`, `POST /api/pacientes/atender` y `DELETE /api/pacientes/<id>`. Los campos JSON, validaciones, códigos HTTP y formatos de respuesta se encuentran definidos en la sección 4 de `docs/PLAN_TECNICO.md` y son obligatorios para la implementación. Cualquier cambio debe acordarse y documentarse antes de modificar código o pruebas.
 - Separar estado por instancia y ambiente. Las pruebas no deben depender de datos de ejecuciones anteriores; evitar que pruebas paralelas compartan la cola global.
 - Herramientas propuestas: pytest + pytest-cov para unitarias, un cliente HTTP contra la instancia desplegada para integración, Playwright con Python + POM para E2E, Docker Compose si el entorno lo permite y Jenkins para pipeline. El cliente Flask puede complementar, pero no sustituye la integración de caja negra contra API en ejecución.
 - Ambientes propuestos `ci` y `staging`, cada uno con puerto, instancia y datos propios. Nunca publicar secretos SMTP.
@@ -86,13 +86,13 @@ Los tres deben **escribir pruebas**, **modificar el pipeline** y tener **al meno
 
 ## 7. Orden de ejecución y dependencias
 
-**Bloque 0 — Documentación:** revisar y aprobar conjuntamente esta guía y `docs/PLAN_TECNICO.md` por PR desde `docs/test-strategy`. No modificar `main` directamente; los agentes pueden preparar ramas independientes con los contratos marcados como provisionales.
+**Bloque 0 — Documentación (completado):** la guía operativa y el plan técnico ya fueron integrados en `main`. Antes de implementar componentes dependientes, el equipo debe aprobar el contrato API y registrar las decisiones técnicas definitivas.
 
 **Bloque 1 — Contratos y dominio:** Ana define la semántica de `PatientQueue` y sus fixtures; Juan acuerda con ella el `id`, validaciones, campos y códigos HTTP de la API provisional. Acordar también cómo inyectar estado. Ninguno debe inventar por separado la interfaz del otro.
 
 **Bloque 2 — Paralelo:** Juan implementa API, integración, Docker y ambientes; Víctor crea POM y puede preparar E2E sobre la interfaz HTML estable; Ana termina cobertura y gate unitario. Víctor ejecuta el E2E final cuando exista una instancia desplegada y los selectores estén congelados.
 
-**Bloque 3 — CI coordinado:** Ana prepara gate unitario/calidad; Juan prepara artefacto, Docker/ambientes y gate de integración; Víctor prepara E2E, artifacts, SMTP y gate E2E. Cada uno modifica un bloque reservado del pipeline; se integran secuencialmente para evitar conflictos. Un script auxiliar cuenta sólo si el pipeline lo ejecuta.
+**Bloque 3 — CI coordinado:** Ana Sofía crea el `Jenkinsfile` inicial con el gate unitario y de cobertura. Juan Pablo incorpora posteriormente las etapas de build, despliegue, ambientes y gate de integración. Víctor agrega al final las etapas E2E, reportes y notificaciones SMTP. La integración de cambios al pipeline se realiza mediante PRs en el orden Ana → Juan Pablo → Víctor. Cada integrante debe modificar personalmente el pipeline y realizar commits propios. El resto del desarrollo puede avanzar en paralelo.
 
 **Bloque 4 — Integración:** PRs con revisión, pruebas locales, merge ordenado a `main`, pipeline end-to-end, evidencias, ensayos de fallas, tag y preparación del archivo MIU. No mezclar cambios incompatibles ni hacer force-push a `main`.
 

@@ -119,9 +119,9 @@ La cola debe inyectarse por instancia en la app de prueba. No se deben crear una
 
 Secuencia futura: (1) encapsular cola y contador sin cambiar resultados, (2) agregar `create_app(queue_or_service=None, test_config=None)`, (3) conservar URLs, campos y `data-testid`, (4) implementar API sobre el mismo servicio y (5) revisar la duplicidad del CLI tras confirmar su alcance.
 
-## 4. Contrato preliminar y unificado para API REST JSON
+## 4. Contrato API REST JSON aprobado por el equipo
 
-El repositorio oficial exige un sistema con API HTTP y pruebas de integración contra una instancia en ejecución, pero no fija nombres de endpoints, campos ni códigos concretos. Lo siguiente es un **contrato provisional del equipo** para evitar que los integrantes trabajen con interfaces distintas. Debe aprobarse antes de implementarse.
+El equipo adopta el siguiente contrato REST JSON como referencia común para el desarrollo. Los endpoints, métodos HTTP, campos, códigos de respuesta y formatos definidos en esta sección deben respetarse durante la implementación de la API y sus pruebas. Cualquier modificación posterior debe acordarse entre los integrantes y actualizarse en ambos documentos antes de implementarse.
 
 ### 4.1 Convenciones
 
@@ -428,13 +428,15 @@ feat/juan-api-integration  -> API, tests/integration/, Docker/ambientes
 feat/victor-e2e-demo       -> tests/e2e/, POM, notificaciones/evidencias
 ```
 
-El `Jenkinsfile` es un punto de conflicto. Para que los tres lo modifiquen sin editar la misma sección en paralelo:
+El `Jenkinsfile` será integrado progresivamente para evitar conflictos entre las ramas de los tres integrantes.
 
-1. Reservar bloques independientes `Unit`, `Build/Deploy/Integration` y `E2E/Notification`.
-2. Cada integrante cambia sólo su bloque desde su rama y adjunta su evidencia.
-3. Integrar en secuencia Ana → Juan → Víctor; el siguiente actualiza su rama con `main` después de cada merge aprobado.
-4. Si se usan scripts auxiliares, cada script debe ser invocado por el pipeline y su commit debe ser atribuible a su responsable.
-5. Los contratos y cambios cruzados se revisan por PR; ningún agente borra pruebas o reescribe cambios ajenos para resolver conflictos.
+1. **Ana Sofía:** crea la estructura inicial del `Jenkinsfile` y configura las etapas de pruebas unitarias, cobertura y calidad.
+2. **Juan Pablo:** después de integrar la rama de Ana, actualiza su rama desde `main` y agrega las etapas de construcción del artefacto, despliegue, ambientes y pruebas de integración.
+3. **Víctor:** después de integrar la rama de Juan Pablo, actualiza su rama desde `main` y agrega las etapas E2E, publicación de reportes y notificaciones SMTP.
+4. Cada integrante debe realizar personalmente sus modificaciones, probar su etapa y generar commits propios.
+5. Los cambios al pipeline se integran mediante Pull Requests en el orden Ana → Juan Pablo → Víctor. Nadie debe sobrescribir las etapas de otro integrante.
+
+Los tres pueden desarrollar sus pruebas y componentes independientes en paralelo. Únicamente las modificaciones al `Jenkinsfile` se integrarán de manera secuencial.
 
 ## 12. Archivos antiguos: recomendación, no ejecución
 
