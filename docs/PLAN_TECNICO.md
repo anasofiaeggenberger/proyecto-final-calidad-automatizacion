@@ -11,7 +11,7 @@ Los estados se usan así:
 - **Pendiente:** decisión, infraestructura o requisito que todavía debe cerrarse.
 - **Oficial:** requisito publicado por el repositorio del curso.
 
-La fuente oficial consultada y accesible es [danihrndzld/proyecto-final-calidad](https://github.com/danihrndzld/proyecto-final-calidad). Cuando este plan propone nombres de rutas, campos, códigos HTTP o herramientas que la fuente no fija, se identifican como decisiones provisionales.
+La fuente oficial consultada y accesible es [danihrndzld/proyecto-final-calidad](https://github.com/danihrndzld/proyecto-final-calidad). El contrato REST de la sección 4 es una decisión aprobada del equipo, aunque su implementación sigue planificada. Las decisiones que la fuente oficial no fija y que aún no se han cerrado se identifican como pendientes.
 
 ## 1. Estado real de la aplicación
 
@@ -113,11 +113,11 @@ create_app / adaptadores web y API
 
 Estructura futura sugerida: `domain/` para modelo y cola, `services/` para casos de uso, `web/` para adaptadores Flask y carpetas separadas de pruebas y automatización. No se debe crear esta estructura durante la presente tarea.
 
-Responsabilidades: `Patient` contiene nombre, prioridad, orden e identificador si se aprueba; `PatientQueue` encapsula una cola por instancia; `PatientService` centraliza validación y casos de uso sin depender de Flask; los adaptadores convierten resultados a HTML o JSON.
+Responsabilidades acordadas: `Patient` representa un `id` único y estable, `nombre`, `prioridad` y `orden_llegada`; `PatientQueue` encapsula una cola por instancia y conserva prioridad/FIFO; `PatientService` centraliza la validación 1–5 y los casos de uso sin depender de Flask; los adaptadores HTML y API convierten los resultados del mismo servicio a redirects/flashes o JSON.
 
-La cola debe inyectarse por instancia en la app de prueba. No se deben crear una cola para la web y otra para la API.
+La cola debe inyectarse por instancia en la app de prueba y la instancia de aplicación debe compartir el mismo `PatientService`/`PatientQueue` entre HTML y API. No se deben crear una cola para la web y otra para la API. El estado global de `paciente.py` es una limitación actual que se reemplazará durante la extracción.
 
-Secuencia futura: (1) encapsular cola y contador sin cambiar resultados, (2) agregar `create_app(queue_or_service=None, test_config=None)`, (3) conservar URLs, campos y `data-testid`, (4) implementar API sobre el mismo servicio y (5) revisar la duplicidad del CLI tras confirmar su alcance.
+Secuencia futura: (1) encapsular cola y contador sin cambiar resultados, (2) agregar una app factory que permita inyectar el servicio/cola y la configuración de pruebas, sin fijar todavía su firma pública, (3) conservar URLs, campos y `data-testid`, (4) implementar API sobre el mismo servicio y (5) revisar la duplicidad del CLI tras confirmar su alcance.
 
 ## 4. Contrato API REST JSON aprobado por el equipo
 
@@ -130,11 +130,11 @@ El equipo adopta el siguiente contrato REST JSON como referencia común para el 
 - `id` estable por paciente, por ejemplo `p-0001`, para no eliminar por nombre duplicado.
 - Prioridad válida: entero entre 1 y 5, donde 1 es la más urgente.
 - Respuestas JSON con `Content-Type: application/json`.
-- Campos desconocidos: `400` en esta propuesta.
+- Campos desconocidos: `400`.
 
-### 4.2 Endpoints provisionales
+### 4.2 Endpoints aprobados
 
-| Método | Ruta provisional | Éxito propuesto | Errores principales |
+| Método | Ruta | Éxito | Errores principales |
 |---|---|---|---|
 | `GET` | `/api/health` | `200` con estado, ambiente y versión del artefacto | `503` sólo si existe una dependencia externa no disponible |
 | `POST` | `/api/pacientes` | `201` con paciente creado y posición | `400` por JSON ausente, nombre o prioridad inválidos |
@@ -142,9 +142,9 @@ El equipo adopta el siguiente contrato REST JSON como referencia común para el 
 | `POST` | `/api/pacientes/atender` | `200` con paciente; en vacío, `200` con `paciente: null` | — |
 | `DELETE` | `/api/pacientes/<id>` | `204` sin cuerpo | `404` si el id no existe |
 
-La propuesta de cinco endpoints está dentro de la orientación oficial de un sistema pequeño de 3 a 5 endpoints. Las rutas HTML actuales no se reemplazan.
+El contrato aprobado contiene cinco endpoints, dentro de la orientación oficial de un sistema pequeño de 3 a 5 endpoints. Las rutas HTML actuales no se reemplazan.
 
-### 4.3 Cuerpos provisionales
+### 4.3 Cuerpos aprobados
 
 Alta:
 
@@ -158,9 +158,9 @@ Paciente:
 {"id": "p-0001", "nombre": "Ana López", "prioridad": 2, "orden_llegada": 0}
 ```
 
-Alta y listado usarían, respectivamente, `{"paciente": {...}, "posicion": 1}` y `{"total": 2, "proximo": {...}, "pacientes": [...]}`.
+Alta y listado responden, respectivamente, `{"paciente": {...}, "posicion": 1}` y `{"total": 2, "proximo": {...}, "pacientes": [...]}`.
 
-Atender vacío usaría `{"paciente": null, "mensaje": "La cola está vacía. No hay pacientes por atender."}`.
+Atender vacío responde `{"paciente": null, "mensaje": "La cola está vacía. No hay pacientes por atender."}`.
 
 Error común:
 
@@ -174,17 +174,17 @@ Error común:
 }
 ```
 
-Los nombres anteriores, `id`, el formato de error y el `200` para cola vacía son decisiones del equipo, no requisitos oficiales. Ana debe confirmar el modelo con Juan; Juan debe congelar el contrato antes de implementar la API; Víctor debe consumirlo sólo cuando esté aprobado.
+Los nombres anteriores, `id`, el formato de error y el `200` para cola vacía son decisiones aprobadas del equipo, no requisitos impuestos por la fuente oficial. Ana debe implementar el modelo de dominio compatible; Juan Pablo debe implementar este contrato y probar sus respuestas JSON mediante integración HTTP; Víctor debe realizar los recorridos E2E sobre la interfaz web.
 
 ### 4.4 Salud de la instancia y SHA
 
-El requisito oficial exige que el artefacto se construya una sola vez por build, se identifique con el SHA del commit o una versión, y que la instancia responda ese identificador por HTTP junto con su ambiente. La respuesta futura de `/api/health` debe incluir, como mínimo:
+El requisito oficial exige que el artefacto se construya una sola vez por build, se identifique con el SHA del commit o una versión, y que la instancia responda ese identificador por HTTP junto con su ambiente. La implementación futura de `/api/health` debe incluir, como mínimo:
 
 ```json
 {"estado": "ok", "ambiente": "ci", "version": "<SHA-completo-del-commit>"}
 ```
 
-Esto no existe en `app.py` todavía. La ruta, nombres del cuerpo y forma de inyectar la versión siguen siendo pendientes de implementación, aunque el requisito del artefacto identificable sí es oficial.
+Esto no existe en `app.py` todavía: la ruta y el cuerpo aprobados aún deben implementarse. La forma de inyectar la versión del artefacto sigue pendiente de implementación, aunque el requisito de exponerla sí es oficial.
 
 ## 5. Aislamiento de datos
 
@@ -275,7 +275,7 @@ Juan debe ejecutar estas pruebas de caja negra contra la API en ejecución. Cada
 | Eliminar ausente | N/A | N/A | Cualquiera | No | `404`, sin mutación |
 | Health normal | N/A | N/A | N/A | N/A | `200`, estado, ambiente y SHA |
 
-La tabla usa el contrato provisional de la sección 4; si el equipo cambia un código o campo, debe actualizar ambas matrices y `DECISIONES.md` antes de codificar.
+La tabla usa el contrato aprobado de la sección 4. Si el equipo necesita cambiar un código o campo, debe acordarlo y actualizar ambos documentos y `DECISIONES.md` antes de modificar código o pruebas.
 
 ## 8. Estrategia E2E con Playwright y POM
 
@@ -309,7 +309,7 @@ Cada recorrido crea un contexto y datos propios. Víctor debe guardar screenshot
 Antes de implementar, registrar en `DECISIONES.md` dos principios y su evidencia. Propuesta:
 
 - **Single Responsibility:** `PatientForm` sólo encapsula registro y `PatientQueueView` sólo lectura/acciones de la cola; evita un page object monolítico y duplicación de selectores.
-- **Interface Segregation:** los tests de smoke consumen una interfaz pequeña de registro y los de cola otra de lectura/atención; evita obligar a cada prueba a conocer operaciones que no usa.
+- **Interface Segregation (candidato condicionado):** sólo puede justificarse si la implementación futura define abstracciones/interfaces concretas y cada consumidor depende de un subconjunto que necesita; dividir Page Objects no demuestra ISP por sí solo. Si no existe esa evidencia, el equipo debe sustituirlo por otro principio justificable y documentar la clase, la alternativa y el problema evitado.
 
 La clase, el problema que evita y el test/build donde se observa deben quedar documentados. Recibir una dependencia por constructor, por sí solo, no cuenta como principio.
 
@@ -385,11 +385,11 @@ La distribución es exclusiva y debe mantenerse en los PRs. Los tres integrantes
 - **Pipeline:** agregar el bloque `unit + coverage`, reporte JUnit/cobertura y el gate de calidad.
 - **Documentación:** sección de reglas de negocio, matriz unitaria, umbral y justificación en `DECISIONES.md`.
 - **Evidencia:** reporte de cobertura, resultado unitario verde y build detenido por cobertura o regresión en `EVIDENCIA.md`/`evidencia/`.
-- **No asumir:** diseño final de la API, Docker, POM ni SMTP.
+- **No modificar:** Ana no debe modificar el contrato REST aprobado ni implementar los endpoints asignados a Juan Pablo; Docker corresponde a Juan Pablo, y POM y SMTP corresponden a Víctor.
 
 ### Juan Pablo — API REST, integración, Docker, ambientes y gate de integración
 
-- **Código/pruebas:** congelar e implementar el contrato API aprobado sobre el servicio de Ana; escribir integración HTTP de caja negra con equivalencias, límites y tabla de decisión.
+- **Código/pruebas:** implementar el contrato API aprobado sobre el servicio de Ana; escribir integración HTTP de caja negra con equivalencias, límites y tabla de decisión.
 - **Infraestructura:** crear el Dockerfile/Compose o aislamiento equivalente, construir una vez por SHA y levantar `ci`/`staging` con configuración separada.
 - **Pipeline:** agregar build/deploy, health con ambiente/SHA y gate de integración.
 - **Documentación:** contrato API, matriz de integración, diseño de ambientes y decisión de Docker en `DECISIONES.md`.
@@ -412,10 +412,10 @@ Cada integrante debe tener como mínimo tres commits propios en el historial del
 
 ### 11.1 Dependencias
 
-1. Ana documenta y estabiliza la semántica de cola/servicio y su fixture.
-2. Juan acuerda con Ana el modelo `Paciente`, `id`, validaciones y códigos; después implementa API, Docker y ambientes.
+1. Ana documenta y estabiliza la semántica interna de `Patient`/`PatientQueue`/`PatientService` y su fixture, respetando el contrato aprobado.
+2. Juan implementa el contrato API aprobado sobre el servicio de Ana y define sólo los detalles internos de inyección, DTOs y mapeo de errores que no están fijados.
 3. Víctor puede preparar POM sobre la UI actual, pero ejecuta E2E final cuando Juan exponga una instancia desplegada y los `data-testid` estén congelados.
-4. Los tres congelan el contrato, nombres de parámetros y artifacts antes de integrar el pipeline.
+4. Los tres mantienen congelados los endpoints y respuestas aprobados; antes de integrar el pipeline acuerdan nombres de parámetros, artifacts y demás detalles operativos pendientes.
 5. La demo y las evidencias se generan sólo después de un build verde reproducible.
 
 ### 11.2 Ramas y archivos de propiedad
@@ -458,9 +458,9 @@ No se eliminan aquí: actualmente forman una interfaz de consola separada y reti
 | RQ-02 | Menor número = mayor urgencia | U-06 y matriz de integración | Implementado |
 | RQ-03 | FIFO en empate | U-07–U-09 y E2E 2 | Implementado; pruebas planificadas |
 | RQ-04 | Cola vacía sin mutación | U-10/U-11, integración y E2E 3 | Implementado en web |
-| RQ-05 | Eliminar objetivo | U-12/U-13 e integración | Implementado por nombre; API futura requiere decidir `id` |
+| RQ-05 | Eliminar objetivo | U-12/U-13 e integración | Implementado por nombre en HTML; API planificada con `id` aprobado |
 | RQ-06 | Lógica aislable | `PatientQueue`, servicio y fixtures | Planificado |
-| RQ-07 | API HTTP probada en ejecución | API provisional y tests de Juan | Planificado; rutas/campos pendientes de aprobación |
+| RQ-07 | API HTTP probada en ejecución | Contrato aprobado y tests de Juan | Planificado; implementación pendiente |
 | RQ-08 | Tres E2E mínimo, uno smoke | Playwright/POM y artifacts | Requisito oficial; planificado |
 | RQ-09 | Unitarias con cobertura y gate | JUnit, cobertura y build rojo | Requisito oficial; planificado |
 | RQ-10 | Integración de caja negra con técnicas | Matrices y requests HTTP | Requisito oficial; planificado |
@@ -479,8 +479,8 @@ No se eliminan aquí: actualmente forman una interfaz de consola separada y reti
 
 La fuente oficial confirma el objetivo general, pero no decide por el equipo:
 
-1. ¿Se aprueban exactamente las rutas y campos provisionales de la sección 4?
-2. ¿Se acepta agregar `id` al modelo y mantener las rutas HTML actuales por nombre?
+1. ¿Qué interfaces internas de inyección, asignación del `id` único, DTOs y mapeo de errores necesita la implementación, sin alterar el contrato REST aprobado?
+2. ¿Cómo se mapeará la eliminación HTML actual por nombre al `id` aprobado de la API sin cambiar las rutas existentes?
 3. ¿Qué porcentaje de cobertura se justifica en `DECISIONES.md` y qué módulos quedan fuera?
 4. ¿Docker/Compose estará disponible o se usará aislamiento equivalente?
 5. ¿Qué servidor SMTP, credenciales inyectadas y dirección autorizada se usarán en la demo?
@@ -496,7 +496,7 @@ La fuente oficial solicita, además del código, README con sistema/ambientes/pa
 
 Orden recomendado:
 
-1. Confirmar las preguntas abiertas y congelar contratos.
+1. Confirmar las preguntas internas/operativas abiertas sin modificar el contrato REST aprobado.
 2. Extraer servicio/cola y escribir unitarias.
 3. Implementar API, integración HTTP, Docker/ambientes y health con SHA.
 4. Implementar POM, tres E2E y artifacts.
