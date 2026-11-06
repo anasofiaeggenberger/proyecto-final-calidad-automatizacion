@@ -72,3 +72,12 @@ El repositorio original no contiene `LICENSE`, `LICENSE.md`, `COPYING` ni `NOTIC
 ## Alcance
 
 Esta etapa se limita a la limpieza visual y funcional del dashboard. No incluye API JSON, CI/CD, Docker ni una suite completa de pruebas.
+
+## Estrategia técnica y colaboración
+
+La estrategia futura de pruebas y automatización está documentada en:
+
+- [Plan técnico](docs/PLAN_TECNICO.md): arquitectura propuesta, contrato API provisional, matrices de pruebas, aislamiento, Jenkins, ambientes y riesgos.
+- [Guía operativa para agentes](docs/GUIA_AGENTES_PROYECTO_FINAL.md): responsabilidades, dependencias, ramas, evidencias y reglas de integración.
+
+Estos documentos describen trabajo planificado; no significan que la API, las pruebas, Docker o Jenkins ya estén implementados. Para colaborar, cada integrante debe trabajar en una rama propia, mantener su alcance, ejecutar las verificaciones de su cambio y abrir un PR con evidencia. Ana Sofía es responsable de lógica/unitarias/cobertura/gate de calidad; Juan Pablo de API/integración/Docker/ambientes/gate de integración; y Víctor de Playwright/POM/gate E2E/notificaciones/demo. No se deben hacer commits, pushes ni merges a nombre de otra persona ni guardar secretos en el repositorio.
