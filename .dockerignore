@@ -1,0 +1,13 @@
+.git
+.gitignore
+.venv
+__pycache__
+**/__pycache__
+*.pyc
+docs
+evidencia
+reports
+tests
+Jenkinsfile
+requirements-ci.txt
+requirements-dev.txt
