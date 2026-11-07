@@ -1,0 +1,13 @@
+# Gate de health: SHA distinto al desplegado (debe fallar)
+health inválido: version='d6822810b74b5efed0f8d79c85143fa5ccb228f7', se esperaba 'sha-que-no-corresponde'
+health http://127.0.0.1:8002/api/health -> {"ambiente": "staging", "estado": "ok", "version": "d6822810b74b5efed0f8d79c85143fa5ccb228f7"}
+exit=1
+
+# Gate de health: ambiente distinto al desplegado (debe fallar)
+health inválido: ambiente='staging', se esperaba 'ci'
+health http://127.0.0.1:8002/api/health -> {"ambiente": "staging", "estado": "ok", "version": "d6822810b74b5efed0f8d79c85143fa5ccb228f7"}
+exit=1
+
+# Gate de health: instancia inexistente (debe fallar por timeout)
+health no respondió en 3s: <urlopen error [Errno 61] Connection refused>
+exit=1
