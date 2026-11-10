@@ -1,0 +1,11 @@
+--- a/templates/index.html
++++ b/templates/index.html
+@@ -136,7 +136,7 @@
+                                 <span id="priority-help" class="field-help">1 requiere atención inmediata; 5 es la menor urgencia.</span>
+                             </div>
+ 
+-                            <button type="submit" class="button button--primary" data-testid="register-patient-button">
++                            <button type="submit" class="button button--primary" data-testid="register-patient-action">
+                                 Registrar paciente
+                                 <span class="button-arrow" aria-hidden="true">→</span>
+                             </button>

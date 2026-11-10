@@ -1,0 +1,2 @@
+# Los parches de demo contienen líneas de contexto del formato diff.
+demo/fallas/*.patch -whitespace

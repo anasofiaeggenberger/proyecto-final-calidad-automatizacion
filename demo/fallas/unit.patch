@@ -1,0 +1,11 @@
+--- a/domain/patient.py
++++ b/domain/patient.py
+@@ -36,7 +36,7 @@
+     def sort_key(self) -> tuple[int, int]:
+         """Clave de atención: mayor urgencia primero y FIFO en empate."""
+ 
+-        return self.prioridad, self.orden_llegada
++        return -self.prioridad, self.orden_llegada
+ 
+     def __lt__(self, other: Any) -> bool:
+         if not isinstance(other, Patient):

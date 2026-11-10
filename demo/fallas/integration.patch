@@ -1,0 +1,11 @@
+--- a/api/routes.py
++++ b/api/routes.py
+@@ -90,7 +90,7 @@
+     except PatientServiceError as error:
+         return _error("SOLICITUD_INVALIDA", str(error), 400)
+ 
+-    return jsonify({"paciente": _serializar(paciente), "posicion": _posicion(paciente)}), 201
++    return jsonify({"paciente": _serializar(paciente), "posicion": _posicion(paciente)}), 200
+ 
+ 
+ @api_bp.get("/pacientes")
