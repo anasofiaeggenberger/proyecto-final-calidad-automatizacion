@@ -120,11 +120,19 @@ pipeline {
                 sh '''
                     set -eu
                     mkdir -p "$BUILD_REPORT_DIR"
+                    REPORTE="$BUILD_REPORT_DIR/health-$ENVIRONMENT.txt"
+                    # sin tuberia: con `| tee` el stage heredaba el codigo de tee (0) y
+                    # un health invalido no detenia el pipeline
+                    set +e
                     "$PYTHON_BIN" scripts/verificar_health.py \\
                         --url "http://127.0.0.1:$APP_PORT/api/health" \\
                         --ambiente "$ENVIRONMENT" \\
                         --version "$COMMIT_SHA" \\
-                        --timeout 90 | tee "$BUILD_REPORT_DIR/health-$ENVIRONMENT.txt"
+                        --timeout 90 > "$REPORTE" 2>&1
+                    CODIGO_HEALTH=$?
+                    set -e
+                    cat "$REPORTE"
+                    exit "$CODIGO_HEALTH"
                 '''
             }
         }
