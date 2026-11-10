@@ -204,7 +204,7 @@ pipeline {
                 script { env.FAILED_STAGE = 'E2E Tests' }
                 sh '''
                     set -eu
-                    "$PYTHON_BIN" -m playwright install --with-deps "$BROWSER"
+                    "$PYTHON_BIN" -m playwright install "$BROWSER"
                     E2E_BASE_URL="$APP_BASE_URL" \\
                     E2E_ALLOW_CLEANUP=1 \\
                     EXPECTED_AMBIENTE="$ENVIRONMENT" \\
