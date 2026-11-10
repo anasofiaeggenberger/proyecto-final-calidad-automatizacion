@@ -28,3 +28,7 @@ reports/
 # Reportes generados por la aplicación
 reporte_pacientes.txt
 reporte_sin_estructuras.txt
+
+# Playwright y reportes locales
+/test-results/
+/playwright-report/
