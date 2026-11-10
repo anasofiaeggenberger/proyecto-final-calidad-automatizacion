@@ -7,6 +7,12 @@
 
 > **Importante:** Este documento combina hechos observados en el repositorio, requisitos oficiales y decisiones **planificadas**. `docs/PLAN_TECNICO.md` es su documento técnico complementario; ambos deben mantenerse alineados mediante PRs y no implican que API, pruebas, Docker o Jenkins ya existan. Si existe una contradicción, prevalecen las instrucciones oficiales de https://github.com/danihrndzld/proyecto-final-calidad y se debe informar al equipo. No afirmar que algo está implementado si sólo está planificado.
 
+> **Actualización de implementación — 9 de noviembre de 2026.** Esta rama contiene dominio y
+> unitarias de Ana, API/HTTP/Docker/ambientes de Juan y 17 E2E con POM, gate, SMTP y demo.
+> El resto del documento conserva la planificación original: sus estados “futuro” o “no existe”
+> describen la base que se revisó entonces. El estado vigente está en README.md,
+> docs/ESTADO_PROYECTO.md y EVIDENCIA.md. Jenkins/SMTP real y entrega final siguen pendientes.
+
 ## 1. Contexto y estado real
 
 Se reutiliza, con autorización de los autores, un proyecto académico de cola de prioridad hospitalaria: https://github.com/anasofiaeggenberger/Proyecto-Priority-Queue. La aplicación actual usa Python y Flask, plantillas HTML y CSS. Permite registrar pacientes con urgencia 1–5, ver la cola, atender al paciente más urgente y eliminar pacientes. En empates debe respetar el orden de llegada (FIFO). Se retiró la interfaz antigua «Sin Estructura» y se creó un dashboard visual renovado. La cola se almacena en memoria: se reinicia con el proceso y no debe tratarse como almacenamiento persistente.
