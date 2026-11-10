@@ -1,0 +1,43 @@
+name: hospital-queue
+
+x-api-base: &api-base
+  image: ${IMAGE_NAME:-hospital-queue}:${APP_VERSION:-dev}
+  build:
+    context: .
+    args:
+      APP_VERSION: ${APP_VERSION:-dev}
+  restart: "no"
+  healthcheck:
+    test:
+      - CMD
+      - python
+      - -c
+      - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health').read()
+    interval: 5s
+    timeout: 3s
+    retries: 12
+    start_period: 3s
+
+services:
+  # cada ambiente es un contenedor, un puerto y una cola en memoria propios
+  api-ci:
+    <<: *api-base
+    profiles: ["ci"]
+    container_name: hospital-api-ci
+    environment:
+      APP_AMBIENTE: ci
+      APP_VERSION: ${APP_VERSION:-dev}
+      PORT: 8000
+    ports:
+      - "${CI_PORT:-8001}:8000"
+
+  api-staging:
+    <<: *api-base
+    profiles: ["staging"]
+    container_name: hospital-api-staging
+    environment:
+      APP_AMBIENTE: staging
+      APP_VERSION: ${APP_VERSION:-dev}
+      PORT: 8000
+    ports:
+      - "${STAGING_PORT:-8002}:8000"
