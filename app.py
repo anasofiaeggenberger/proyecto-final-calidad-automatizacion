@@ -2,6 +2,7 @@ import os
 
 from flask import Flask, flash, redirect, render_template, request, url_for
 
+from api import api_bp, register_api_error_handlers
 from services.patient_service import (
     InvalidPatientNameError,
     InvalidPriorityError,
@@ -25,6 +26,9 @@ def create_app(config=None, service=None):
     flask_app.config["SECRET_KEY"] = os.environ.get(
         "FLASK_SECRET_KEY", "hospital-dashboard-development-key"
     )
+    # ambiente y versión del artefacto se inyectan por entorno y se exponen en /api/health
+    flask_app.config["AMBIENTE"] = os.environ.get("APP_AMBIENTE", "local")
+    flask_app.config["VERSION"] = os.environ.get("APP_VERSION", "desconocida")
     if config is not None:
         flask_app.config.update(config)
 
@@ -105,6 +109,9 @@ def create_app(config=None, service=None):
         else:
             flash(f"No se encontró a {nombre} en la cola.", "error")
         return redirect(url_for("index", _anchor="queue"))
+
+    flask_app.register_blueprint(api_bp)
+    register_api_error_handlers(flask_app)
 
     return flask_app
 
