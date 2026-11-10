@@ -1,14 +1,44 @@
 # Decisiones técnicas
 
-> **Estado actualizado:** concurrencia y aislamiento entre builds corregidos y probados.
-> Ver [cierre de correcciones](docs/CIERRE_CORRECCIONES.md). Los estados anteriores se conservan como historial;
-> quedan únicamente las comprobaciones externas de Jenkins/SMTP y la entrega del equipo.
+> **Estado al documentar:** `main` está en `299c7b3` (`299c7b3b41355606e6bf59670cf1ae3cf09ac5d1`).
+> La implementación y las validaciones locales recientes están documentadas por separado de la
+> evidencia histórica de Docker/Jenkins. No se presenta como verificado un build Jenkins nuevo,
+> una entrega SMTP real ni la secuencia verde → roja → verde.
 
 Documento compartido del equipo. Cada integrante mantiene su propia sección.
 
-- Ana Sofía: dominio, pruebas unitarias, cobertura y gate de calidad. *(pendiente)*
+- Ana Sofía: dominio, pruebas unitarias, cobertura y gate de calidad.
 - Juan Pablo: API REST, integración, Docker, ambientes y gate de integración.
-- Víctor: Playwright/POM, gate E2E, notificaciones SMTP y demo implementados; validación operativa pendiente.
+- Víctor: Playwright/POM, gate E2E, notificaciones SMTP y demo; validación operativa de Jenkins/SMTP pendiente.
+
+## Matriz de decisiones y trazabilidad
+
+La siguiente tabla resume decisiones efectivamente reflejadas en el código. “Evidencia” identifica
+archivos o pruebas reproducibles; no implica que una ejecución local sustituya una ejecución de
+Jenkins. La fuente oficial es el [repositorio de instrucciones del profesor](https://github.com/danihrndzld/proyecto-final-calidad).
+
+| ID | Decisión | Alternativa considerada | Concepto técnico | Evidencia verificable | Fuente |
+|---|---|---|---|---|---|
+| DEC-01 | Crear la aplicación con `create_app` y un `PatientService` por instancia | Cola global compartida | SRP, inyección y aislamiento de estado | `app.py:create_app`; `tests/unit/test_patient_service.py::test_service_instances_are_isolated` | `docs/PLAN_TECNICO.md`, secciones 11.1–11.2 |
+| DEC-02 | Mantener la API en el blueprint `api/` | Agregar las rutas REST dentro de `app.py` | Separación de responsabilidades y propiedad de archivos | `api/routes.py`; registro en `app.py`; `tests/integration/test_contrato_http.py` | `docs/PLAN_TECNICO.md`, sección 11.2 |
+| DEC-03 | Ordenar la cola por `(prioridad, orden_llegada)` con heap | FIFO único o varios workers con colas separadas | Invariante de dominio y FIFO en empates | `domain/patient.py:sort_key`; `domain/patient_queue.py`; pruebas de listado/atención | `docs/PLAN_TECNICO.md`, secciones 2 y 7 |
+| DEC-04 | Identificar y eliminar por `id` único en API y HTML | Buscar/eliminar por nombre | Identidad estable y contrato HTTP | `app.py:eliminar`; `templates/index.html`; `tests/unit/test_app_html_deletion.py`; `tests/integration/test_eliminar_pacientes.py::test_eliminar_por_id_distingue_homonimos` | Requisito funcional y corrección consolidada en `299c7b3` |
+| DEC-05 | Probar la API de integración por HTTP real con `urllib` | `app.test_client()` o agregar `requests` | Caja negra y dependencia mínima | `tests/integration/api_client.py`; `tests/integration/conftest.py`; 71 casos coleccionados | Instrucciones oficiales, testing de caja negra |
+| DEC-06 | Aplicar gate de cobertura de 90 % sobre `domain` y `services` | Medir toda la aplicación o no bloquear el build | Quality gate y feedback temprano | `Jenkinsfile`, etapa `Unit Tests + Coverage`, opciones `--cov=domain`, `--cov=services`, `--cov-fail-under=90` | `docs/JENKINS.md`; requisito oficial de cobertura |
+| DEC-07 | Construir una imagen por SHA y desplegarla en perfiles `ci`/`staging` con `--no-build` | Construir una imagen distinta por ambiente | Artefacto inmutable y configuración como código | `Jenkinsfile`; `Dockerfile`; `docker-compose.yml`; `scripts/gestionar_ambiente.py` | `docs/PLAN_TECNICO.md`, secciones 8–9 |
+| DEC-08 | Hacer que el Health Gate conserve salida y código de `verificar_health.py` | `curl | tee` sin propagar el código de salida | Fail-fast y observabilidad | `Jenkinsfile`, etapa `Health Gate`; `scripts/verificar_health.py`; corrección `d07d642` | `docs/JENKINS.md`, sección de Health Gate |
+| DEC-09 | Usar POM y separar lectura/acciones con `QueueReader` y `QueueActions` | Selectores y acciones duplicados en cada test | SRP e ISP | `tests/e2e/pages/`; `tests/e2e/contracts.py`; `tests/e2e/conftest.py` | `docs/E2E.md`; documentación oficial de Playwright |
+| DEC-10 | Implementar SMTP con `smtplib` y credenciales Jenkins inyectadas | Email Extension o secretos en el repositorio | Gestión de secretos y TLS explícito | `scripts/notificar_fallo.py`; `Jenkinsfile:withCredentials`; `tests/notifications/` | `docs/JENKINS.md`; fuente [8] al final |
+
+### Gate de cobertura: alcance y límites
+
+El gate vigente ejecuta `pytest tests/unit` con `--cov=domain --cov=services` y
+`--cov-fail-under=90` (`Jenkinsfile`, etapa `Unit Tests + Coverage`). Por lo tanto, el porcentaje
+del gate mide los módulos `domain/` y `services/`; no incluye como objetivos de cobertura a
+`app.py`, `api/`, `tests/` ni `scripts/`. Esas áreas sí tienen pruebas de integración, unitarias o
+de pipeline donde corresponde, pero no deben contarse dentro del porcentaje del gate. Los XML
+históricos de cobertura se identifican en [EVIDENCIA.md](EVIDENCIA.md) y no se presentan como una
+medición nueva de `299c7b3`.
 
 ---
 
@@ -73,9 +103,31 @@ valores absolutos.
 caso del pipeline). Si no existe, levanta un proceso propio en un puerto libre y lo apaga en
 `finally`, de modo que la misma suite sirve para verificación local sin Docker.
 
-**Técnicas aplicadas** (secciones 7.1–7.3 del plan): particiones de equivalencia de `nombre`,
-`prioridad`, estado de la cola y eliminación; valores límite `0`, `1`, `5`, `6`, `""`, `"   "` y
-`"A"`; y la tabla de decisión completa, incluyendo que un alta inválida no mute la cola.
+**Técnicas aplicadas** (secciones 7.1–7.3 del plan): las particiones, límites y decisiones se
+trazan en la matriz siguiente. No todos los casos usan las tres técnicas; cada fila identifica la
+técnica primaria de los casos que agrupa.
+
+### Matriz de trazabilidad de integración
+
+La suite tiene 71 casos coleccionados: 38 de alta, 5 de atención, 12 de contrato HTTP, 7 de
+eliminación, 4 de health y 5 de listado. Las parametrizaciones se indican explícitamente para no
+confundir el número de funciones con el número de casos ejecutables.
+
+| Casos pytest reales | Técnica primaria | Entrada o condición | Resultado esperado | Requisito/regla cubierta |
+|---|---|---|---|---|
+| `test_alta_acepta_todas_las_prioridades_del_rango` (parametrización `[1, 2, 3, 4, 5]`); `test_alta_rechaza_prioridades_fuera_del_rango` (`[0, -1, 6, 99]`); `test_alta_rechaza_prioridades_con_tipo_invalido` (`[\"2\", \"\", 2.5, None, True, [2], {\"valor\": 2}]`) | Partición de equivalencia + valores límite | Prioridades válidas, inmediatamente fuera del rango y tipos no enteros | `201` para válidas; `400/PRIORIDAD_INVALIDA` para inválidas | Prioridad entera de 1 a 5 |
+| `test_alta_rechaza_nombres_invalidos` (parametrización `[\"\", \"   \", \"\\t\\n\", None, 123, [], {}]`); `test_alta_rechaza_nombre_ausente`; `test_alta_acepta_el_nombre_mas_corto`; `test_alta_normaliza_espacios_del_nombre` | Partición de equivalencia + valor límite | Vacío, espacios, tipos no texto, ausencia, un carácter y espacios laterales | `400/NOMBRE_INVALIDO`, o alta normalizada cuando corresponde | Validación y normalización de nombre |
+| `test_alta_rechaza_cuerpo_ausente`; `test_alta_rechaza_json_no_valido` (parametrización `[\"{\", \"[]\", \"texto\", \"null\"]`); `test_alta_rechaza_content_type_incorrecto`; `test_alta_rechaza_campos_desconocidos` | Tabla de decisión de entrada HTTP | Cuerpo ausente, JSON inválido, media type incorrecto o campos extra | `400` con `JSON_INVALIDO` o `CAMPOS_DESCONOCIDOS`; la cola no muta | Contrato de alta y rechazo seguro |
+| `test_alta_invalida_no_muta_la_cola`; `test_eliminar_inexistente_no_muta_la_cola`; `test_atender_cola_vacia_responde_200_sin_paciente`; `test_atender_cola_vacia_es_repetible_y_no_muta` | Tabla de decisión de estado | Operación inválida o cola vacía frente a cola con datos | Error sin mutación, o `200` con `paciente: null` | Estados vacíos y atomicidad observable |
+| `test_listado_ordena_por_urgencia`; `test_listado_respeta_fifo_en_empate_de_urgencia`; `test_atender_entrega_al_paciente_mas_urgente`; `test_atender_respeta_fifo_en_empate`; `test_atender_agota_la_cola_en_el_orden_esperado` | Partición de equivalencia + tabla de decisión | Prioridades diferentes y empates con orden de llegada conocido | Menor número primero; empate FIFO; la atención retira el próximo | Prioridad, FIFO y atención |
+| `test_eliminar_existente_responde_204_sin_cuerpo`; `test_eliminar_id_inexistente_responde_404`; `test_eliminar_id_mal_formado_responde_404`; `test_eliminar_dos_veces_el_mismo_id_responde_404`; `test_eliminar_inexistente_no_muta_la_cola`; `test_eliminar_mantiene_el_orden_de_los_demas`; `test_eliminar_por_id_distingue_homonimos` | Partición de equivalencia + tabla de decisión | ID existente, inexistente, mal formado, repetido y homónimos | `204` sin cuerpo para existente; `404/PACIENTE_NO_ENCONTRADO` sin borrar otro; orden restante intacto | Eliminación por identidad y conservación de cola |
+| `test_metodos_no_permitidos_responden_405_en_json[GET-/api/pacientes/atender]` y sus casos `PUT`, `PATCH`, `DELETE`, `POST`; `test_ruta_api_inexistente_responde_404_en_json`; `test_el_esquema_del_paciente_no_expone_campos_extra`; `test_el_esquema_de_error_es_uniforme`; `test_las_respuestas_json_declaran_su_content_type` | Tabla de decisión de contrato HTTP | Métodos/rutas permitidos o no permitidos y esquemas de respuesta | `405`/`404` JSON, campos y media type del contrato | Contrato HTTP y errores uniformes |
+| `test_health_responde_ok_con_ambiente_y_version`; `test_health_declara_json`; `test_health_expone_el_ambiente_desplegado`; `test_health_expone_la_version_del_artefacto` | Partición de contrato de despliegue | Health válido y variables esperadas cuando están declaradas | `200` JSON con estado, ambiente y versión; `skip` explícito si falta expectativa | Health Gate y trazabilidad del artefacto |
+
+La fixture `api` limpia por HTTP antes y después de cada prueba y verifica `total == 0`; el
+contador de `orden_llegada` no se reinicia y por eso las aserciones comparan orden relativo. La
+fuente de cada caso es `tests/integration/`; la colección reproducible es
+`.venv/bin/python -m pytest --collect-only -q tests/integration`.
 
 ### 4. Docker, artefacto único y ambientes
 
@@ -87,8 +139,9 @@ caso del pipeline). Si no existe, levanta un proceso propio en un puerto libre y
   imposible que el ambiente corra una imagen distinta de la construida.
 - `docker-compose.yml` define dos servicios con *profiles*: `api-ci` (puerto 8001) y `api-staging`
   (puerto 8002). Comparten imagen y difieren en `APP_AMBIENTE`, puerto y contenedor, por lo que cada
-  ambiente tiene su propia cola en memoria. El aislamiento se verificó registrando un paciente en
-  `ci` y comprobando que `staging` seguía vacío.
+  ambiente tiene su propia cola en memoria. El aislamiento se verificó en una validación Docker
+  histórica registrando un paciente en `ci` y comprobando que `staging` seguía vacío; esa ejecución
+  no se presenta como un build del `HEAD` actual.
 - *Alternativa descartada:* un solo contenedor con dos puertos o dos workers. No daría estados
   separados ni un `ambiente` distinguible en `/api/health`.
 - *Alternativa descartada:* aislamiento por procesos sin Docker. Se mantiene como plan de respaldo si
@@ -117,12 +170,12 @@ que nadie pueda eludir el gate de Ana al lanzar un build.
 
 ### 6. Sugerencias de IA aceptadas y rechazadas
 
-| # | Sugerencia | Decisión | Motivo |
+| # | Sugerencia | Decisión | Justificación y evidencia |
 |---|---|---|---|
-| 1 | Separar la API en un blueprint `api/` en vez de ampliar `app.py` | **Aceptada** | Reduce el conflicto previsto en la sección 11.2 del plan y deja la propiedad del archivo clara |
-| 2 | Usar `requests` para el cliente de integración | **Rechazada** | Obligaba a regenerar `requirements-ci.txt`, archivo bloqueado con hashes del bloque de Ana; `urllib` cubre el caso sin dependencias |
-| 3 | Servir el contenedor con `gunicorn --workers 4` | **Rechazada** | La cola es estado en memoria del proceso; varios workers la partirían y romperían prioridad/FIFO. Se dejó `--workers 1 --threads 4` |
-| 4 | Verificar el health desde el pipeline con `curl` y `grep` | **Rechazada** | Un `grep` del SHA pasa por coincidencia parcial; el script compara campo por campo y falla con un mensaje legible |
+| 1 | Separar la API en un blueprint `api/` en vez de ampliar `app.py` | **Aceptada** | Reduce el conflicto previsto en `docs/PLAN_TECNICO.md:11.2`; se verifica en `api/routes.py` y el registro del blueprint en `app.py`. |
+| 2 | Usar `requests` para el cliente de integración | **Rechazada** | Habría requerido regenerar `requirements-ci.txt`; `tests/integration/api_client.py` usa `urllib` y la suite funciona sin esa dependencia adicional. |
+| 3 | Servir el contenedor con `gunicorn --workers 4` | **Rechazada** | La cola es estado en memoria; `Dockerfile` conserva un worker y threads para no partir prioridad/FIFO. La regla está cubierta por pruebas de dominio y del servicio. |
+| 4 | Verificar el health con `curl` y `grep` | **Rechazada** | El gate debe comparar campos y conservar el código de salida; `scripts/verificar_health.py` y `Jenkinsfile` implementan esa comparación y propagación. |
 
 ### 7. Fuentes
 
@@ -192,12 +245,12 @@ El [guion](docs/DEMO.md) distingue los ensayos locales de los builds reales aún
 
 ### Sugerencias de IA
 
-| Sugerencia | Decisión | Motivo |
+| Sugerencia | Decisión | Justificación y evidencia |
 |---|---|---|
-| Reutilizar TypeScript exactamente como en la práctica | Rechazada | El equipo acordó Python y pytest; se reutiliza el diseño, no otro stack |
-| Separar lectura y acciones con Protocols | Aceptada | Permite demostrar ISP con contratos y consumidores reales |
-| Añadir endpoint de reset para limpiar E2E | Rechazada | Cambiaría la API de Juan; la limpieza usa GET/DELETE existentes |
-| Dar por probado SMTP con mocks | Rechazada | Los mocks prueban el código, no la entrega de correo; se deja el buzón pendiente |
+| Reutilizar TypeScript exactamente como en la práctica | Rechazada | El equipo acordó Python y pytest; `tests/e2e/` implementa el mismo enfoque con POM sin introducir Node. |
+| Separar lectura y acciones con Protocols | Aceptada | `tests/e2e/contracts.py` y sus fixtures muestran consumidores separados, lo que permite justificar ISP. |
+| Añadir endpoint de reset para limpiar E2E | Rechazada | Cambiaría el contrato de la API; `tests/e2e/support/queue_state.py` limpia con GET/DELETE existentes. |
+| Dar por probado SMTP con mocks | Rechazada | Los tests de `tests/notifications/` verifican el código, pero no la entrega a un buzón; `EVIDENCIA.md` mantiene esa prueba pendiente. |
 
 ### Fuentes complementarias
 
@@ -212,11 +265,11 @@ https://www.jenkins.io/doc/pipeline/steps/credentials-binding/. Consulta: 9 nov.
 [8] Python Software Foundation, “smtplib — SMTP protocol client,” Python 3.12.
 [En línea]. Disponible: https://docs.python.org/3.12/library/smtplib.html. Consulta: 9 nov. 2026.
 
-## Actualización de auditoría PR #8
+## Estado de verificación y límites
 
-Ver [informe de auditoría](docs/AUDITORIA_PR8.md).
-La evidencia anterior conserva sus SHAs y conteos históricos. La auditoría actual registra
-22 pruebas SMTP, cobertura 99.12 % y smoke/regression en ambos navegadores.
-No se considera validado el aislamiento entre jobs: disableConcurrentBuilds sólo protege
-el mismo job; Compose y su cleanup comparten nombres y puertos. La solución compartida
-requiere aprobación. Dominio concurrente, Jenkins real y SMTP recibido siguen pendientes.
+La implementación de POM, el aislamiento por contexto de navegador, los gates y la notificación
+SMTP se pueden inspeccionar en sus archivos fuente y pruebas. Los resultados locales recientes y
+la evidencia histórica se detallan en [EVIDENCIA.md](EVIDENCIA.md). Sigue pendiente una ejecución
+real de Jenkins que acredite builds verde → rojo → verde, la detención de etapas posteriores y la
+recepción de un correo SMTP. Tampoco se debe convertir la existencia de XML, capturas o trazas en
+prueba de que el `HEAD` actual fue ejecutado por Jenkins.

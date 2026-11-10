@@ -1,186 +1,120 @@
 # Evidencia de ejecución
 
-> **Estado actualizado:** concurrencia y aislamiento entre builds corregidos y probados.
-> Ver [cierre de correcciones](docs/CIERRE_CORRECCIONES.md). Los estados anteriores se conservan como historial;
-> quedan únicamente las comprobaciones externas de Jenkins/SMTP y la entrega del equipo.
+> **Estado documental:** `main` está en `299c7b3b41355606e6bf59670cf1ae3cf09ac5d1`.
+> Este documento separa resultados locales recientes, evidencia histórica y comprobaciones aún
+> pendientes. Un reporte, captura o archivo XML no demuestra por sí solo que el `HEAD` actual haya
+> sido ejecutado por Jenkins.
 
-Documento compartido del equipo. Cada integrante mantiene su propia sección y sus archivos en
-`evidencia/`.
+## 1. Resultado local reciente
 
-## Conteo de pruebas por capa
+La siguiente validación se realizó después de corregir la eliminación HTML por ID, en el working
+tree que posteriormente se consolidó en `299c7b3`. Los manifiestos `selection.json` disponibles
+para Playwright registran el checkout `46c466259f958bb3976a8195c37109f043a47ded` (`46c4662`),
+por lo que estos resultados no se atribuyen a la ejecución del commit final ni a Jenkins.
 
-| Capa | Responsable | Casos | Estado |
-|---|---|---:|---|
-| Unitarias | Ana Sofía y corrección concurrente | 67 | verde (cobertura 99.19 %, umbral 90 %) |
-| Integración HTTP | Juan Pablo | 71 (3 marcados `smoke`) | verde contra el contenedor desplegado |
-| E2E Playwright | Víctor | 17 (1 marcado smoke) | verde en Chromium y Firefox; también contra Docker |
-| Notificaciones | Víctor | 22 | verde local, sin envío real |
-| Soporte de despliegue | Víctor | 13 | verde; propiedad y cleanup |
+| Verificación | Resultado observado | Ambiente | SHA verificable en el artefacto | Evidencia disponible | Clasificación |
+|---|---:|---|---|---|---|
+| Ruff | OK | Local | No registrado en un manifiesto versionado | Comando de validación local | VERIFICADO LOCALMENTE |
+| Unitarias | 72 aprobadas, 0 fallos, 0 omitidas | Local | No hay JUnit reciente versionado con ese conteo | Resultado de la ejecución local; `evidencia/unitarias/` contiene reportes históricos | VERIFICADO LOCALMENTE |
+| Integración HTTP | 71 aprobadas, 0 fallos, 0 omitidas | Flask temporal en localhost | No hay JUnit reciente versionado con ese conteo | Resultado de la ejecución local; `tests/integration/` permite reconstruir la colección | VERIFICADO LOCALMENTE |
+| E2E Chromium, regresión | 17 aprobadas, 0 fallos, 0 omitidas | Servidor HTTP local temporal | `reports/e2e/chromium-regression/selection.json` → `46c4662` | Reporte local ignorado por Git | VERIFICADO LOCALMENTE |
+| E2E Chromium, smoke | 1 aprobada, 0 fallos, 16 deseleccionadas | Servidor HTTP local temporal | `reports/e2e/chromium-smoke/selection.json` → `46c4662` | Reporte local ignorado por Git | VERIFICADO LOCALMENTE |
+| E2E Firefox, regresión | 17 aprobadas, 0 fallos, 0 omitidas | Servidor HTTP local temporal | `reports/e2e/firefox-regression/selection.json` → `46c4662` | Reporte local ignorado por Git | VERIFICADO LOCALMENTE |
+| E2E Firefox, smoke | 1 aprobada, 0 fallos, 16 deseleccionadas | Servidor HTTP local temporal | `reports/e2e/firefox-smoke/selection.json` → `46c4662` | Reporte local ignorado por Git | VERIFICADO LOCALMENTE |
 
----
+Los comandos de referencia para repetir estas capas son los definidos en `Jenkinsfile`,
+`docs/E2E.md` y `README.md`. Las ejecuciones anteriores no iniciaron Jenkins ni constituyen un
+build CI. La cobertura no se declara como resultado actual de esta tabla: los XML disponibles de
+cobertura son históricos y se identifican en la sección 2.
 
-## Juan Pablo — API, integración y ambientes
+### Composición reproducible de integración
 
-### Verificación local realizada
+La colección actual de `tests/integration/` contiene 71 casos ejecutables:
 
-Ejecutada sobre el commit `d6822810b74b5efed0f8d79c85143fa5ccb228f7` (base de la rama
-`feat/juan-api-integration`), con Docker 28.4.0 y Docker Compose v2.39.2 en macOS Apple Silicon.
+| Archivo | Casos coleccionados | Técnica o alcance |
+|---|---:|---|
+| `test_alta_pacientes.py` | 38 | Alta, validación, límites y JSON |
+| `test_atender_pacientes.py` | 5 | Prioridad, FIFO y cola vacía |
+| `test_contrato_http.py` | 12 | Métodos, rutas, esquemas, tipos y aislamiento |
+| `test_eliminar_pacientes.py` | 7 | ID existente, inválido, repetido, homónimos y orden |
+| `test_health.py` | 4 | Estado, ambiente, versión y media type |
+| `test_listado_pacientes.py` | 5 | Cola vacía, prioridad, FIFO y no mutación |
+| **Total** | **71** | `.venv/bin/python -m pytest --collect-only -q tests/integration` |
 
-| Archivo | Contenido |
-|---|---|
-| `evidencia/integracion/verificacion-local.txt` | SHA e id de la imagen, `/api/health` de `ci` y `staging`, prueba de aislamiento entre ambientes y requests/responses de cada caso del contrato |
-| `evidencia/integracion/pytest-local.txt` | Salida de las 71 pruebas de integración contra el contenedor `ci` |
-| `evidencia/integracion/junit-local.xml` | Reporte JUnit de esa misma ejecución |
-| `evidencia/integracion/gate-health-negativo.txt` | El gate de health fallando con SHA incorrecto, ambiente incorrecto e instancia caída |
+La matriz de técnicas y casos se encuentra en [DECISIONES.md](DECISIONES.md), sección “Matriz de
+trazabilidad de integración”.
 
-Resultados observados:
+## 2. Evidencia histórica identificable
 
-- Artefacto único: `hospital-queue:d6822810b74b5efed0f8d79c85143fa5ccb228f7`,
-  image id `sha256:543255862dfbf0d7ce2169b1c39f53f1d64abf6dc4dda96a56c33f80672d736a`.
-- `GET /api/health` en `ci` → `{"ambiente": "ci", "estado": "ok", "version": "d6822810…"}` (puerto 8001).
-- `GET /api/health` en `staging` → `{"ambiente": "staging", "estado": "ok", "version": "d6822810…"}` (puerto 8002).
-- Ambos ambientes corrieron **la misma imagen** y reportaron el SHA del artefacto.
-- Aislamiento: un alta en `ci` dejó `total: 1` en `ci` y `total: 0` en `staging` al mismo tiempo.
-- Integración: 71 pruebas en verde contra `ci`; 3 pruebas `smoke` en verde contra `staging`.
-- Gate de health: salida distinta de cero en los tres escenarios negativos, con el motivo exacto en el log.
+### Build #3 de Jenkins temporal
 
-### Comandos para reproducirla
+`docs/JENKINS.md` documenta un Build #3 exitoso de una instancia temporal con Ruff, 67 pruebas
+unitarias, 35 pruebas de notificaciones/pipeline, 71 de integración, 17 E2E Chromium, cobertura de
+`domain` y `services` de 99.19 %, despliegue/health/cleanup Docker y reportes publicados. Esa
+referencia es **histórica**:
+no acredita una ejecución del `HEAD` `299c7b3`, no aporta en este repositorio un enlace de consola
+reconstruible y no prueba el envío o la recepción de un correo SMTP real.
 
-```bash
-export APP_VERSION=$(git rev-parse HEAD)
-docker build --build-arg APP_VERSION="$APP_VERSION" -t hospital-queue:"$APP_VERSION" .
-docker compose --profile ci up -d --no-build
-.venv/bin/python scripts/verificar_health.py \
-    --url http://127.0.0.1:8001/api/health --ambiente ci --version "$APP_VERSION"
-API_BASE_URL=http://127.0.0.1:8001 EXPECTED_AMBIENTE=ci EXPECTED_VERSION="$APP_VERSION" \
-    .venv/bin/python -m pytest tests/integration -v
-docker compose --profile ci --profile staging down -v --remove-orphans
-```
+El manifiesto [`evidencia/integracion/cierre-correcciones/manifiesto.json`](evidencia/integracion/cierre-correcciones/manifiesto.json)
+identifica otra validación con `sha_base` `ae5cab5889cc7b318423b1cc76cfa7740df309d0`, cobertura de
+`domain` y `services` de 99.19 %, 102 casos unitarias/pipeline, 71 de integración por ambiente y
+E2E de 17 casos. El mismo manifiesto declara `declarative_jenkins` no validado y
+`correo_real_enviado: false`. No debe
+presentarse como el Build #3 del `HEAD` actual.
 
-### Pendiente: evidencia de builds de Jenkins
+### Otros artefactos versionados
 
-Las etapas `Build Artifact`, `Deploy`, `Health Gate` e `Integration Tests` están en el `Jenkinsfile`
-y su lógica de shell fue ejecutada y verificada localmente, pero **todavía no existe un build de
-Jenkins**: falta definir el host, el agente con Docker y el job. No se registran números de build,
-enlaces de log ni correos que no se hayan producido.
-
-Al tener el job disponible deben llenarse estas filas con capturas y logs reales:
-
-| Build | Ambiente | Suite | SHA | Etapa fallida | Resultado |
-|---|---|---|---|---|---|
-| *(pendiente)* | `ci` | `regression` | | — | verde |
-| *(pendiente)* | `ci` | `regression` | | `Integration Tests` | rojo |
-| *(pendiente)* | `ci` | `regression` | | — | verde tras revertir |
-| *(pendiente)* | `staging` | `smoke` | | — | verde |
-
-### Falla controlada preparada para la demo (capa de integración)
-
-Cambio real y reversible en código de aplicación, **sin desactivar ninguna prueba**: en
-`api/routes.py`, dentro de `eliminar_paciente`, devolver `200` en lugar de `204`.
-
-```python
-    return "", 200   # rompe el contrato: la etapa Integration Tests queda roja
-```
-
-Efecto esperado: `test_eliminar_existente_responde_204_sin_cuerpo` falla, la etapa
-`Integration Tests` queda roja, las etapas posteriores no se ejecutan y el `post` apaga los
-contenedores. Se restaura devolviendo `204`.
-
-Alternativa igual de válida para la misma capa: en `crear_paciente`, devolver `200` en lugar de
-`201`, o eliminar la verificación de `CAMPOS_DESCONOCIDOS`.
-
----
-
-## Víctor — E2E, pipeline, notificaciones y demo
-
-### Comprobación final local
-
-9 de noviembre de 2026, macOS Apple Silicon, Python 3.12.13, Playwright 1.65.0,
-pytest 8.4.2. El commit de código/documentación al ejecutar el cierre fue
-`bea1816`; el commit siguiente únicamente conserva esta evidencia.
-
-- **157 aprobadas** en la ejecución conjunta: 59 unitarias, 71 integración HTTP,
-  17 E2E Chromium y 10 notificaciones. Sin casos omitidos ni fallos.
-- Cobertura de domain/services: **99.12 %**, frente al gate de 90 %.
-- Ruff: sin errores para app.py, api, domain, services, tests y scripts.
-- E2E local por separado: 17/17 Chromium y 17/17 Firefox.
-- El reporte HTML completo queda en reports/final/report.html (generado, ignorado en Git).
-
-La evidencia conservada no contiene builds ni correos inventados. Los ensayos locales
-corren HTTP real y Playwright, pero no acreditan ejecución dentro de Jenkins.
-
-### Artefacto y ambientes verificados
-
-Se construyó la imagen identificada por el SHA completo
-`4010a7e3a09e6d39605932355a226c5dacad7c2a`, una vez para esta validación.
-Se desplegó el mismo image ID en ci:8001 y staging:8002 con --no-build.
-
-| Ambiente | Integración | E2E | Health |
-|---|---:|---:|---|
-| ci | 71/71 regresión | 17/17 Chromium | estado ok, ambiente ci y SHA exacto |
-| staging | 3/3 smoke | 1/1 Firefox smoke | estado ok, ambiente staging y mismo SHA |
-
-El registro de un paciente en ci produjo total=1 allí y total=0 en staging.
-El gate de health devolvió código 1 al exigir una versión incorrecta.
-Ambos contenedores del proyecto se apagaron al terminar. Los cambios posteriores al
-SHA de la imagen agregan demo/documentación/evidencia; no cambian la aplicación empaquetada.
-
-### Fallas reales y recuperación
-
-Ensayadas en un worktree temporal de la rama demo/validar-gates, sobre `fbe8565`
-más el parche de aplicación sin commit. No se modificaron ni desactivaron pruebas.
-
-| Capa | Rojo observado | Tras revertir el parche |
+| Artefacto | Qué demuestra | Límite de uso |
 |---|---|---|
-| Unitarias | 9 fallaron al invertir la prioridad | 59 aprobadas |
-| Integración | 1 fallo y 2 aprobadas de smoke al responder alta 200 | 3 smoke aprobadas |
-| E2E | 1 fallo de smoke por cambio de testid | 1 smoke aprobada |
+| [`evidencia/integracion/auditoria-pr8/manifiesto.json`](evidencia/integracion/auditoria-pr8/manifiesto.json) | Validación local anterior: 71 integración, 59 unitarias, 22 notificaciones y E2E de ambos navegadores | `sha_base` `09ccc08f...`; declara `jenkins_ejecutado: false` y `correo_enviado: false` |
+| [`evidencia/integracion/junit-local.xml`](evidencia/integracion/junit-local.xml) | Un reporte local de 71 pruebas de integración | Es histórico y no registra el `HEAD` actual |
+| [`evidencia/unitarias/junit-local.xml`](evidencia/unitarias/junit-local.xml) | Un reporte local de 59 pruebas unitarias | No es el conteo reciente de 72 |
+| [`evidencia/unitarias/coverage-local.xml`](evidencia/unitarias/coverage-local.xml) | Cobertura histórica de `domain`/`services`: 99.12 % | No es una medición nueva de `299c7b3` |
+| `evidencia/e2e/local-chromium/` y `evidencia/e2e/local-firefox/` | Recorridos locales anteriores de 17 casos por navegador | Sus `selection.json` registran SHAs anteriores (`18801fa` y `8bc7719`) |
+| `evidencia/e2e/deployed-ci/` y `evidencia/e2e/deployed-staging/` | Ensayos contra Docker con health, selección y JUnit | Son históricos; no prueban una ejecución Jenkins nueva |
+| `evidencia/e2e/fallo-controlado/` y `evidencia/e2e/restauracion/` | Fallo y recuperación local de E2E | No prueban que Jenkins haya omitido etapas ni enviado correo |
 
-La captura y la traza del fallo E2E se conservaron. Los códigos de salida y los diffs reales
-están en los logs; esto verifica detección y reversibilidad local. Falta demostrar que
-Jenkins omite etapas posteriores y envía el correo en su entorno.
+Los artefactos históricos conservan valor como evidencia de los ensayos que describen, pero sus
+SHAs, fechas y ambientes deben acompañarlos siempre. No se mezclan con los resultados locales de
+la sección 1.
 
-### Archivos de evidencia
+## 3. Afirmaciones implementadas pero aún no acreditadas operativamente
 
-| Ruta | Contenido |
-|---|---|
-| evidencia/integracion/cierre/ | TXT de health, pytest, Docker/aislamiento y fallo SHA; JUnit ci/staging y cierre conjunto |
-| evidencia/integracion/cierre/demo/ | TXT de rojo/verde y JUnit de unitarias/integración del ensayo |
-| evidencia/e2e/local-chromium/ y local-firefox/ | JUnit, selección y target de las regresiones locales |
-| evidencia/e2e/deployed-ci/ y deployed-staging/ | JUnit, selección y health de los recorridos contra Docker |
-| evidencia/e2e/fallo-controlado/ | JUnit, selección, target, screenshot y trace.zip del fallo de interfaz |
-| evidencia/unitarias/ | JUnit y XML de cobertura medidos en esta sesión |
-| evidencia/notificaciones/ | JUnit de las 10 pruebas del módulo SMTP |
-| evidencia/integracion/cierre/manifiesto.json | SHAs, fecha, comandos y conteos extraídos del JUnit final |
+| Requisito | Implementación inspeccionable | Evidencia operativa faltante | Estado |
+|---|---|---|---|
+| Health Gate bloqueante | `Jenkinsfile` conserva stdout/stderr, código de `scripts/verificar_health.py`, `cat` y `exit` | Build Jenkins que demuestre health rojo y ausencia de `Integration Tests` | PENDIENTE DE VERIFICACIÓN |
+| Orden y bloqueo del pipeline | Stages declarados en `Jenkinsfile`; comando fallido usa código distinto de cero | Build real desde checkout limpio | PENDIENTE DE VERIFICACIÓN |
+| Dos ambientes con un artefacto | `Dockerfile`, `docker-compose.yml` y `scripts/gestionar_ambiente.py` | Build con SHA, URLs, image ID y logs vinculados al mismo build | PENDIENTE DE VERIFICACIÓN |
+| Notificación SMTP | `scripts/notificar_fallo.py`, `withCredentials` y tests locales | Correo real recibido con build, SHA, ambiente, etapa y enlace | PENDIENTE DE VERIFICACIÓN |
+| Demo verde → roja → verde | Guion y fallos reversibles en [`docs/DEMO.md`](docs/DEMO.md) | Tres builds Jenkins identificables y restauración posterior | PENDIENTE DE VERIFICACIÓN |
+| Instalación Jenkins limpia | Requisitos descritos en [`docs/JENKINS.md`](docs/JENKINS.md) | Agente real preparado desde cero, plugins, Docker, navegadores y credenciales | PENDIENTE DE VERIFICACIÓN |
 
-Los TXT de salida de comandos se guardan bajo evidencia/integracion, como se solicitó.
-Los requirements*.txt permanecen en raíz porque son manifiestos de instalación usados por
-Docker, uv y Jenkins.
+Los tests de notificaciones prueban formato, validaciones, TLS y manejo de credenciales sin enviar
+mensajes reales. Por eso “tests SMTP en verde” no equivale a “correo recibido”.
 
-### Validación operativa pendiente
+## 4. Plantilla para completar con evidencia Jenkins real
 
-No se proporcionó un Jenkins ni servidor/credenciales SMTP. El envío está implementado en
-scripts/notificar_fallo.py y Jenkinsfile, con TLS y credenciales inyectadas, pero **no se ha
-enviado ni recibido un correo real**. Las 10 pruebas no contactan buzones.
+No se rellenan celdas con números, enlaces o SHAs que no existan. Cada fila deberá conservar el
+log/artefacto y el checkout exacto que la produjo.
 
-Completar estas filas en el entorno del equipo antes de presentar la entrega como cerrada:
+| Build | Ambiente | Parámetros (`ENVIRONMENT`, `SUITE`, `BROWSER`) | SHA completo | Resultado/etapa | Prueba o fallo | Enlace de consola | Artefactos | SMTP recibido |
+|---|---|---|---|---|---|---|---|---|
+| pendiente | `ci` | `ci`, `regression`, `chromium` | pendiente | verde | — | pendiente | JUnit, coverage, health, E2E | no verificado |
+| pendiente | `staging` | `staging`, `smoke`, `firefox` | pendiente | verde | — | pendiente | JUnit, health, E2E | no verificado |
+| pendiente | `ci` | parámetros del build | pendiente | rojo | etapa/prueba real pendiente | pendiente | log y reportes del fallo | pendiente |
+| pendiente | `ci` | parámetros del build | pendiente | verde restaurado | — | pendiente | reportes posteriores | no verificado |
+| pendiente | `ci` o `staging` | parámetros del build | pendiente | abortado/timeout | etapa real pendiente | pendiente | log, cleanup, notificación | pendiente |
 
-| Build/enlace | SHA | Ambiente | Suite/navegador | Estado/etapa | Correo recibido |
-|---|---|---|---|---|---|
-| pendiente | | ci | regression/chromium | verde | — |
-| pendiente | | staging | smoke/firefox | verde | — |
-| pendiente | | ci | regression/chromium | rojo por capa | pendiente |
-| pendiente | | ci | regression/chromium | verde restaurado | — |
-| pendiente | | ci | cualquiera | timeout/aborto | pendiente |
+## 5. Fuentes y reproducibilidad
 
-El guion y la configuración están en docs/DEMO.md y docs/JENKINS.md.
-El tag final y la entrega MIU corresponden al cierre integrado del equipo.
+- Pipeline, orden de etapas, gate de cobertura, Health Gate, publicación y cleanup: [`Jenkinsfile`](Jenkinsfile).
+- Requisitos del agente y límites de la evidencia Jenkins temporal: [`docs/JENKINS.md`](docs/JENKINS.md).
+- Diseño y ejecución E2E: [`docs/E2E.md`](docs/E2E.md).
+- Guion de fallos controlados y recuperación: [`docs/DEMO.md`](docs/DEMO.md).
+- Decisiones, cobertura y matriz de técnicas: [`DECISIONES.md`](DECISIONES.md).
+- Requisitos oficiales: [repositorio del profesor](https://github.com/danihrndzld/proyecto-final-calidad).
 
-## Actualización de auditoría PR #8
-
-Ver [informe de auditoría](docs/AUDITORIA_PR8.md).
-La evidencia anterior conserva sus SHAs y conteos históricos. La auditoría actual registra
-22 pruebas SMTP, cobertura 99.12 % y smoke/regression en ambos navegadores.
-No se considera validado el aislamiento entre jobs: disableConcurrentBuilds sólo protege
-el mismo job; Compose y su cleanup comparten nombres y puertos. La solución compartida
-requiere aprobación. Dominio concurrente, Jenkins real y SMTP recibido siguen pendientes.
+La próxima actualización de este archivo debe incorporar únicamente artefactos generados por el
+entorno que se quiera acreditar, con fecha, SHA completo, parámetros, resultado y enlace
+identificable. Hasta entonces, SMTP real, Jenkins verde → rojo → verde y la reproducibilidad desde
+un Jenkins limpio permanecen sin verificar.

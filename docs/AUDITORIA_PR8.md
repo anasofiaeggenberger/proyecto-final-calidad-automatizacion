@@ -1,16 +1,17 @@
 # Auditoría final del PR #8
 
-> **Estado actualizado:** concurrencia y aislamiento entre builds corregidos y probados.
-> Ver [cierre de correcciones](CIERRE_CORRECCIONES.md). Los estados anteriores se conservan como historial;
-> quedan únicamente las comprobaciones externas de Jenkins/SMTP y la entrega del equipo.
+> **Documento histórico:** este informe conserva los hallazgos observados sobre `ae5cab5` y no es
+> el estado de `main` en `299c7b3`. Ver [cierre de correcciones](CIERRE_CORRECCIONES.md) para el
+> estado posterior; la evidencia operativa de Jenkins/SMTP sigue separada en [EVIDENCIA.md](../EVIDENCIA.md).
 
 **Informe histórico de ae5cab5. Los hallazgos de código se resolvieron tras autorización.**
 
-Estado vigente y pruebas: [Cierre de correcciones](CIERRE_CORRECCIONES.md).
+Estado posterior documentado: [Cierre de correcciones](CIERRE_CORRECCIONES.md). La existencia de
+esa corrección no equivale a un build Jenkins actual.
 
-Se corrigieron los defectos SMTP dentro del alcance del PR. Quedan un defecto de concurrencia
-en dominio y una condición insegura de aislamiento entre jobs, además de la validación real
-de Jenkins/SMTP. No se declara el proyecto completamente validado.
+En el snapshot auditado se identificaron defectos SMTP, de concurrencia y de aislamiento. Esas
+observaciones se conservan para trazabilidad histórica; no deben leerse como defectos confirmados
+del `HEAD` actual. La validación real de Jenkins/SMTP nunca queda acreditada sólo por este informe.
 
 ## A. Defectos confirmados
 

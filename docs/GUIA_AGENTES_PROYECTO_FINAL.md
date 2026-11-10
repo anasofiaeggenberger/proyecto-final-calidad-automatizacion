@@ -5,19 +5,24 @@
 **Fecha oficial publicada:** 10 de noviembre de 2026, 14:29 (hora de Guatemala).
 **Equipo:** Ana Sofía, Juan Pablo y Víctor.
 
-> **Importante:** Este documento combina hechos observados en el repositorio, requisitos oficiales y decisiones **planificadas**. `docs/PLAN_TECNICO.md` es su documento técnico complementario; ambos deben mantenerse alineados mediante PRs y no implican que API, pruebas, Docker o Jenkins ya existan. Si existe una contradicción, prevalecen las instrucciones oficiales de https://github.com/danihrndzld/proyecto-final-calidad y se debe informar al equipo. No afirmar que algo está implementado si sólo está planificado.
+> **Importante:** Este documento conserva instrucciones operativas y decisiones de planificación de
+> una etapa anterior. Para el estado vigente deben consultarse `README.md`, `DECISIONES.md`,
+> `EVIDENCIA.md` y `docs/ESTADO_PROYECTO.md`. Si existe una contradicción, prevalecen las
+> instrucciones oficiales de https://github.com/danihrndzld/proyecto-final-calidad y se debe
+> informar al equipo.
 
-> **Actualización de implementación — 9 de noviembre de 2026.** Esta rama contiene dominio y
-> unitarias de Ana, API/HTTP/Docker/ambientes de Juan y 17 E2E con POM, gate, SMTP y demo.
-> El resto del documento conserva la planificación original: sus estados “futuro” o “no existe”
-> describen la base que se revisó entonces. El estado vigente está en README.md,
-> docs/ESTADO_PROYECTO.md y EVIDENCIA.md. Jenkins/SMTP real y entrega final siguen pendientes.
+> **Actualización de implementación — `main` en `299c7b3`.** El código vigente contiene dominio,
+> unitarias, API/HTTP, Docker/ambientes y 17 E2E por navegador con POM, gate, SMTP y demo. El resto
+> conserva la planificación original y sus estados “futuro” o “no existe” son históricos. Jenkins,
+> SMTP real y entrega final siguen pendientes de acreditación.
 
 ## 1. Contexto y estado real
 
 Se reutiliza, con autorización de los autores, un proyecto académico de cola de prioridad hospitalaria: https://github.com/anasofiaeggenberger/Proyecto-Priority-Queue. La aplicación actual usa Python y Flask, plantillas HTML y CSS. Permite registrar pacientes con urgencia 1–5, ver la cola, atender al paciente más urgente y eliminar pacientes. En empates debe respetar el orden de llegada (FIFO). Se retiró la interfaz antigua «Sin Estructura» y se creó un dashboard visual renovado. La cola se almacena en memoria: se reinicia con el proceso y no debe tratarse como almacenamiento persistente.
 
-La migración y el rediseño están implementados en la base actual. La aplicación web fue comprobada manualmente y Codex reportó validaciones básicas correctas. La API JSON, las suites completas de pruebas y el pipeline final todavía no están implementados.
+La migración, la API JSON, las suites por capas y el pipeline están implementados en la base actual.
+Las validaciones locales recientes y sus límites se registran en `EVIDENCIA.md`; eso no equivale a
+un build Jenkins actual ni a SMTP real.
 
 Los documentos de planificación son la referencia compartida para los tres integrantes una vez aprobada su PR. Cada responsable debe crear su propia rama a partir de la última versión aprobada de `main` y respetar el contrato API aprobado y las responsabilidades establecidas.
 
@@ -38,7 +43,8 @@ README.md                 # Instalación y contexto
 .gitignore
 ```
 
-No suponer que las clases `PatientQueue`, `PatientService` ni la app factory existen: siguen planificadas. Los endpoints `/api/*` tampoco están implementados, pero sus cinco rutas, métodos y respuestas ya son el contrato aprobado de desarrollo.
+Las clases `PatientQueue`, `PatientService`, la app factory y los endpoints `/api/*` existen en la
+base actual. Sus contratos y límites se documentan en `docs/PLAN_TECNICO.md` y `DECISIONES.md`.
 
 ## 3. Instalación y ejecución local
 
@@ -56,7 +62,7 @@ Abrir `http://127.0.0.1:5000/`. Detener el servidor con `Ctrl+C`. Si ya existe `
 
 ## 4. Objetivo de la entrega
 
-Sistema web con API HTTP, lógica separable, pruebas unitarias con cobertura como gate, integración de caja negra contra una API desplegada, al menos tres recorridos E2E con Playwright/POM, pipeline con gates, dos ambientes seleccionables, parámetros observables, correo real de fallo, documentación, evidencias y demo controlada. La fuente oficial confirma además el artefacto único identificado por SHA, el registro de ambiente/versión por HTTP, los entregables `DECISIONES.md`, `EVIDENCIA.md` y `evidencia/`, y tres commits por integrante. El contrato API aprobado está en la sección 5 de esta guía y en la sección 4 del plan; el umbral de cobertura sigue siendo una decisión del equipo.
+Sistema web con API HTTP, lógica separable, pruebas unitarias con cobertura como gate, integración de caja negra contra una API desplegada, al menos tres recorridos E2E con Playwright/POM, pipeline con gates, dos ambientes seleccionables, parámetros observables, correo real de fallo, documentación, evidencias y demo controlada. La fuente oficial confirma además el artefacto único identificado por SHA, el registro de ambiente/versión por HTTP, los entregables `DECISIONES.md`, `EVIDENCIA.md` y `evidencia/`, y tres commits por integrante. El contrato API aprobado está en la sección 4 de `docs/PLAN_TECNICO.md`; el umbral de cobertura sigue siendo una decisión del equipo.
 
 Para la demo se debe mostrar un cambio real y reversible en código de aplicación que haga fallar la capa elegida, detenga las siguientes etapas y produzca el correo recibido. No simular éxito ni fabricar evidencia.
 
@@ -67,9 +73,9 @@ Para la demo se debe mostrar un cambio real y reversible en código de aplicaci�
 - Usar IDs únicos para pacientes, especialmente para eliminación: los nombres pueden repetirse.
 - **Contrato API aprobado para el desarrollo:** `GET /api/health`, `GET /api/pacientes`, `POST /api/pacientes`, `POST /api/pacientes/atender` y `DELETE /api/pacientes/<id>`. Los campos JSON, validaciones, códigos HTTP y formatos de respuesta se encuentran definidos en la sección 4 de `docs/PLAN_TECNICO.md` y son obligatorios para la implementación. Cualquier cambio debe acordarse y documentarse antes de modificar código o pruebas.
 - `Patient` representa un `id` único y estable, `nombre`, `prioridad` y `orden_llegada`; `PatientQueue` mantiene prioridad/FIFO en una instancia; `PatientService` centraliza la validación 1–5 y los casos de uso sin depender de Flask. HTML y API deben usar el mismo servicio y la misma cola de la instancia, nunca colas separadas.
-- Separar estado por instancia y ambiente. Las pruebas no deben depender de datos de ejecuciones anteriores; evitar que pruebas paralelas compartan la cola global actual.
-- Herramientas propuestas: pytest + pytest-cov para unitarias, un cliente HTTP contra la instancia desplegada para integración, Playwright con Python + POM para E2E, Docker Compose si el entorno lo permite y Jenkins para pipeline. El cliente Flask puede complementar, pero no sustituye la integración de caja negra contra API en ejecución.
-- Ambientes propuestos `ci` y `staging`, cada uno con puerto, instancia y datos propios. Nunca publicar secretos SMTP.
+- Mantener el estado por instancia y ambiente. Las pruebas no deben depender de datos de ejecuciones anteriores ni compartir una cola global.
+- Herramientas vigentes: pytest + pytest-cov, cliente HTTP contra una instancia real para integración, Playwright con Python + POM, Docker Compose y Jenkins. El cliente Flask puede complementar, pero no sustituye la integración de caja negra.
+- Ambientes vigentes `ci` y `staging`, cada uno con instancia y datos propios. Nunca publicar secretos SMTP.
 
 ## 6. Distribución EXCLUSIVA de responsabilidades
 
@@ -91,7 +97,10 @@ Cada integrante tiene una responsabilidad principal, una parte específica de in
 
 Los tres deben **escribir pruebas**, **modificar el pipeline** y tener **al menos tres commits propios** en el historial del commit entregado. El nombre y correo Git de cada commit deben corresponder a quien lo escribió. Para cumplir la participación, Ana agrega unitarias y gate de calidad, Juan integración y gate de integración, y Víctor E2E, notificaciones y gate E2E. Los cambios se hacen desde cuentas y ramas propias; no se crean commits a nombre de otra persona.
 
-## 7. Orden de ejecución y dependencias
+## 7. Orden histórico de ejecución y dependencias
+
+La siguiente secuencia conserva cómo se planificó y coordinó la implementación. El estado actual y
+las verificaciones pendientes se encuentran en `docs/ESTADO_PROYECTO.md` y `EVIDENCIA.md`.
 
 **Bloque 0 — Documentación:** la guía operativa y el plan técnico deben mantenerse alineados mediante PR. El contrato API ya está aprobado; antes de implementar componentes dependientes, el equipo debe registrar únicamente las decisiones internas y operativas que siguen abiertas.
 
@@ -164,9 +173,9 @@ El commit de ruptura de demo no se califica y el build automático que dispara s
 
 ## 13. Riesgos y preguntas pendientes
 
-- El contrato JSON, `id`, campos y códigos HTTP ya están aprobados y deben respetarse; sólo quedan por definir detalles internos de implementación —incluida la asignación del `id`— y su evidencia.
+- El contrato JSON, `id`, campos y códigos HTTP ya están aprobados y deben respetarse. Los IDs únicos ya están implementados en `domain/patient_queue.py`; queda conservar la evidencia correspondiente a cada ejecución.
 - El porcentaje de cobertura no lo fija la fuente oficial: debe justificarse en `DECISIONES.md`, junto con módulos excluidos.
-- Docker/Compose no es requisito explícito; Juan debe confirmar disponibilidad o documentar aislamiento equivalente.
+- Docker/Compose está implementado y cuenta con evidencia histórica de ejecución; queda confirmar su disponibilidad en el agente Jenkins que se utilice para un build del `HEAD` actual.
 - La integración debe probar una API desplegada y el health debe exponer ambiente y SHA; el cliente Flask aislado no basta como única evidencia.
 - Definir Jenkins host, puertos, navegador y SMTP; el correo real requiere credenciales inyectadas y un destino autorizado.
 - Evitar que todos modifiquen simultáneamente `app.py` o `Jenkinsfile`; establecer bloques reservados, orden de integración y revisión de PRs.

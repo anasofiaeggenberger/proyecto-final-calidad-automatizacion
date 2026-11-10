@@ -1,14 +1,17 @@
 # Plan técnico de pruebas y CI/CD
 
-> **Actualización de implementación — 9 de noviembre de 2026.** Esta rama contiene dominio y
-> unitarias de Ana, API/HTTP/Docker/ambientes de Juan y 17 E2E con POM, gate, SMTP y demo.
-> El resto del documento conserva la planificación original: sus estados “futuro” o “no existe”
-> describen la base que se revisó entonces. El estado vigente está en README.md,
-> docs/ESTADO_PROYECTO.md y EVIDENCIA.md. Jenkins/SMTP real y entrega final siguen pendientes.
+> **Actualización de implementación — `main` en `299c7b3`.** El repositorio contiene dominio,
+> API/HTTP/Docker/ambientes, unitarias y 17 E2E por navegador con POM, gate, SMTP y demo.
+> El resto del documento conserva la planificación original; los estados “futuro” o “no existe”
+> se leen como históricos sólo donde se indique. El estado vigente y los límites de evidencia están
+> en `README.md`, `docs/ESTADO_PROYECTO.md` y `EVIDENCIA.md`. Jenkins/SMTP real y entrega final
+> siguen pendientes.
 
 ## 0. Alcance, fuentes y estados
 
-Este documento define una estrategia técnica para el sistema hospitalario Flask de este repositorio. En esta etapa es documentación: no implementa pruebas, API JSON, Docker, Jenkins ni cambios de producción.
+Este documento define la estrategia técnica y conserva decisiones del sistema hospitalario Flask.
+Las implementaciones actuales se contrastan con el código; las propuestas históricas no se deben
+interpretar como estado vigente.
 
 Los estados se usan así:
 
@@ -17,7 +20,7 @@ Los estados se usan así:
 - **Pendiente:** decisión, infraestructura o requisito que todavía debe cerrarse.
 - **Oficial:** requisito publicado por el repositorio del curso.
 
-La fuente oficial consultada y accesible es [danihrndzld/proyecto-final-calidad](https://github.com/danihrndzld/proyecto-final-calidad). El contrato REST de la sección 4 es una decisión aprobada del equipo, aunque su implementación sigue planificada. Las decisiones que la fuente oficial no fija y que aún no se han cerrado se identifican como pendientes.
+La fuente oficial consultada y accesible es [danihrndzld/proyecto-final-calidad](https://github.com/danihrndzld/proyecto-final-calidad). El contrato REST de la sección 4 está implementado y probado localmente. Las decisiones que la fuente oficial no fija y que aún no se han cerrado se identifican como pendientes.
 
 ## 1. Estado real de la aplicación
 
@@ -25,36 +28,34 @@ La fuente oficial consultada y accesible es [danihrndzld/proyecto-final-calidad]
 
 | Archivo | Estado y responsabilidad observada | Dependencias |
 |---|---|---|
-| `app.py` | **Implementado.** Entrada Flask, validación del formulario, mensajes flash, dashboard y rutas HTML | Flask; funciones de `paciente.py` |
-| `paciente.py` | **Implementado.** `Paciente`, heap global, alta, listado, atención y eliminación para la web | `heapq` |
-| `templates/index.html` | **Implementado.** Dashboard, formulario, tabla/estado vacío, mensajes y `data-testid` | Contexto de `app.py` |
+| `app.py` | **Implementado.** Factory Flask, servicio compartido por instancia, dashboard y rutas HTML/API | Flask; `api/`, `domain/`, `services/` |
+| `domain/` | **Implementado.** `Patient` y `PatientQueue`, prioridad, FIFO, IDs y bloqueo por instancia | Biblioteca estándar |
+| `services/patient_service.py` | **Implementado.** Validación y casos de uso sin depender de Flask | `domain/` |
+| `api/` | **Implementado.** Blueprint, serialización y errores JSON del contrato REST | Flask; `services/` |
+| `templates/index.html` | **Implementado.** Dashboard, formulario, tabla/estado vacío, mensajes, `data-testid` y eliminación por ID | Contexto de `app.py` |
 | `static/css/styles.css` | **Implementado.** Estilos responsive y estados visuales | Ninguna dependencia externa |
-| `priority_queue.py` | **Implementado.** Segunda cola usada por el CLI | `heapq`, `paciente1.py` |
-| `paciente1.py` | **Implementado.** Modelo de paciente del CLI | Ninguna |
-| `main.py` | **Implementado.** Menú interactivo de consola | `priority_queue.py`, `utils.py`, `simulacion.py` |
-| `simulacion.py` | **Implementado.** Simulación y reporte del CLI | `random`, `priority_queue.py` |
-| `utils.py` | **Implementado.** Validación y colorama para el CLI | `colorama` |
-| `requirements.txt` | **Implementado.** Flask 2.3.2, Werkzeug 2.3.7 y colorama 0.4.6 | No incluye dependencias de pruebas |
+| `Dockerfile` / `docker-compose.yml` | **Implementado.** Imagen y perfiles `ci`/`staging` | Docker; `requirements-prod.txt` |
+| `Jenkinsfile` | **Implementado en código.** Gates, despliegue, integración, E2E, reportes y cleanup | Jenkins, `uv`, Docker, Playwright |
+| `requirements*.txt` | **Implementado.** Manifiestos separados de runtime, CI y E2E | `uv` |
 | `.gitignore` | **Implementado.** Ignora entornos, caches, secretos, logs y reportes generados | — |
 
 Dependencias actuales:
 
 ```text
-Navegador
+Dashboard/API
   └── app.py
-        ├── templates/index.html
-        ├── static/css/styles.css
-        └── paciente.py
-              └── heapq
+        ├── templates/index.html / static/css/styles.css
+        ├── api/ ─────────────── services/
+        └── services/ ────────── domain/
 
-CLI opcional
-  └── main.py
-        ├── priority_queue.py ── paciente1.py
-        ├── simulacion.py ────── priority_queue.py
-        └── utils.py ─────────── colorama
+Automatización
+  ├── tests/unit/ tests/integration/ tests/e2e/
+  ├── Dockerfile / docker-compose.yml
+  └── Jenkinsfile / scripts/
 ```
 
-La aplicación web no importa `priority_queue.py`, `paciente1.py`, `simulacion.py` ni `utils.py`. Una prueba de la cola del CLI no demostraría por sí sola el comportamiento de la cola utilizada por Flask.
+El flujo activo web/API usa `domain/` y `services/`. Los archivos CLI históricos, si están presentes,
+no son la fuente de verdad para el comportamiento cubierto por las pruebas web/API.
 
 ### 1.2 Rutas HTML actuales
 
@@ -64,9 +65,10 @@ La aplicación web no importa `priority_queue.py`, `paciente1.py`, `simulacion.p
 | `POST` | `/agregar` | Valida `nombre` y `prioridad`, agrega y redirige a `/#queue`; ante error redirige a `/#register` |
 | `POST` | `/atender` | Atiende el siguiente o muestra mensaje de cola vacía y redirige a `/#queue` |
 | `GET`, `POST` | `/eliminar/` | Redirección de compatibilidad a la cola |
-| `GET`, `POST` | `/eliminar/<nombre>` | Elimina por nombre, muestra flash y redirige a `/#queue` |
+| `GET`, `POST` | `/eliminar/<patient_id>` | Elimina por ID, muestra flash y redirige a `/#queue` |
 
-Estas rutas son **implementadas** y deben conservarse mientras se agregan pruebas. No existe actualmente ninguna ruta `/api/*` ni `/health`.
+Estas rutas son **implementadas** y están cubiertas por regresiones HTML. La API se expone bajo
+`/api/*`, incluido `/api/health`, mediante el blueprint de `api/`.
 
 ### 1.3 Funcionalidad existente y ausente
 
@@ -77,13 +79,14 @@ Estas rutas son **implementadas** y deben conservarse mientras se agregan prueba
 | FIFO cuando la prioridad es igual | **Implementado** mediante `Paciente._contador` y `orden` |
 | Mensajes de éxito, validación y cola vacía | **Implementado** mediante `flash` |
 | Interfaz «Sin Estructura» | **Eliminada de la aplicación web** |
-| API REST JSON | **No implementada; planificada** |
-| Suites unitarias, integración y E2E | **No implementadas; planificadas** |
-| Docker y dos ambientes aislados | **No implementados; planificados** |
-| Jenkins, gates y correo SMTP | **No implementados; planificados** |
-| `DECISIONES.md`, `EVIDENCIA.md` y `evidencia/` | **No existen; entregables planificados** |
+| API REST JSON | **Implementada y probada localmente** |
+| Suites unitarias, integración y E2E | **Implementadas y ejecutadas localmente** |
+| Docker y dos ambientes aislados | **Implementados; la ejecución actual de Jenkins está pendiente** |
+| Jenkins, gates y correo SMTP | **Implementados en código; Jenkins/SMTP real pendientes** |
+| `DECISIONES.md`, `EVIDENCIA.md` y `evidencia/` | **Presentes; evidencia separada por SHA y ambiente** |
 
-La cola web es un estado global en memoria. Se pierde al reiniciar el proceso y no debe confundirse con almacenamiento persistente.
+La cola es un estado en memoria por instancia de `PatientService`/`PatientQueue`. Se pierde al
+reiniciar el proceso y no debe confundirse con almacenamiento persistente.
 
 ## 2. Reglas de negocio y defectos preexistentes
 
@@ -95,17 +98,18 @@ La cola web es un estado global en memoria. Se pierde al reiniciar el proceso y 
 | BR-04 | El listado se ordena por prioridad y llegada | Implementado con `heapq.nsmallest()` |
 | BR-05 | Atender retira el primer paciente | Implementado con `heapq.heappop()` |
 | BR-06 | Atender una cola vacía no modifica el estado | Implementado; Flask muestra mensaje informativo |
-| BR-07 | Eliminar busca por nombre y repara el heap | Implementado; sólo elimina la primera coincidencia |
-| BR-08 | La cola vive en memoria global | Limitación actual |
-| BR-09 | No existe identificador único | Limitación actual; nombres duplicados son ambiguos |
-| BR-10 | La validación está en Flask, no en `paciente.py` | Limitación actual que motiva la extracción |
+| BR-07 | Eliminar busca por ID y repara el heap | Implementado en servicio, API y HTML; cubierto por regresiones de homónimos |
+| BR-08 | La cola vive en memoria por instancia | Limitación operativa; no hay persistencia después del proceso |
+| BR-09 | Cada paciente tiene identificador único estable | Implementado por `PatientQueue`; nombres duplicados no son ambiguos al eliminar |
+| BR-10 | La validación vive en `PatientService` | Implementado y compartido por HTML/API |
 | BR-11 | La web usa redirects y flashes, no JSON | Implementado |
 
 El `return None` después de `heapq.heappop()` en `atender_paciente()` es inalcanzable, pero no cambia el comportamiento actual. Se documenta para una limpieza futura; no se modifica en este trabajo documental.
 
-## 3. Separación de lógica propuesta
+## 3. Separación de lógica implementada
 
-**Planificado, no implementado:** separar reglas de negocio de Flask sin alterar prioridad, FIFO ni las rutas HTML existentes.
+La separación de reglas de negocio de Flask se implementó sin alterar prioridad, FIFO ni los
+selectores `data-testid` existentes.
 
 ```text
 create_app / adaptadores web y API
@@ -117,17 +121,23 @@ create_app / adaptadores web y API
             Patient
 ```
 
-Estructura futura sugerida: `domain/` para modelo y cola, `services/` para casos de uso, `web/` para adaptadores Flask y carpetas separadas de pruebas y automatización. No se debe crear esta estructura durante la presente tarea.
+La estructura vigente usa `domain/` para modelo y cola, `services/` para casos de uso, `api/` para
+el adaptador REST y `app.py` para el dashboard/adaptadores HTML.
 
 Responsabilidades acordadas: `Patient` representa un `id` único y estable, `nombre`, `prioridad` y `orden_llegada`; `PatientQueue` encapsula una cola por instancia y conserva prioridad/FIFO; `PatientService` centraliza la validación 1–5 y los casos de uso sin depender de Flask; los adaptadores HTML y API convierten los resultados del mismo servicio a redirects/flashes o JSON.
 
-La cola debe inyectarse por instancia en la app de prueba y la instancia de aplicación debe compartir el mismo `PatientService`/`PatientQueue` entre HTML y API. No se deben crear una cola para la web y otra para la API. El estado global de `paciente.py` es una limitación actual que se reemplazará durante la extracción.
+La cola se inyecta por instancia en la app de prueba y la instancia comparte el mismo
+`PatientService`/`PatientQueue` entre HTML y API. No se crea una cola para la web y otra para la API.
 
-Secuencia futura: (1) encapsular cola y contador sin cambiar resultados, (2) agregar una app factory que permita inyectar el servicio/cola y la configuración de pruebas, sin fijar todavía su firma pública, (3) conservar URLs, campos y `data-testid`, (4) implementar API sobre el mismo servicio y (5) revisar la duplicidad del CLI tras confirmar su alcance.
+La secuencia anterior se completó en el código actual: cola por instancia, app factory, URLs/campos
+`data-testid` conservados y API sobre el mismo servicio. El CLI histórico queda fuera del flujo web/API.
 
 ## 4. Contrato API REST JSON aprobado por el equipo
 
-El equipo adopta el siguiente contrato REST JSON como referencia común para el desarrollo. Los endpoints, métodos HTTP, campos, códigos de respuesta y formatos definidos en esta sección deben respetarse durante la implementación de la API y sus pruebas. Cualquier modificación posterior debe acordarse entre los integrantes y actualizarse en ambos documentos antes de implementarse.
+El equipo adoptó el siguiente contrato REST JSON como referencia común. Los endpoints, métodos HTTP,
+campos, códigos de respuesta y formatos definidos en esta sección se implementan y se prueban en
+`tests/integration/`. Cualquier modificación posterior debe acordarse entre los integrantes y
+actualizarse en ambos documentos antes de implementarse.
 
 ### 4.1 Convenciones
 
@@ -180,25 +190,35 @@ Error común:
 }
 ```
 
-Los nombres anteriores, `id`, el formato de error y el `200` para cola vacía son decisiones aprobadas del equipo, no requisitos impuestos por la fuente oficial. Ana debe implementar el modelo de dominio compatible; Juan Pablo debe implementar este contrato y probar sus respuestas JSON mediante integración HTTP; Víctor debe realizar los recorridos E2E sobre la interfaz web.
+Los nombres anteriores, `id`, el formato de error y el `200` para cola vacía son decisiones del
+equipo, no requisitos impuestos literalmente por la fuente oficial. El dominio, la API y los
+recorridos E2E actuales comparten las reglas y se validan en sus suites respectivas.
 
 ### 4.4 Salud de la instancia y SHA
 
-El requisito oficial exige que el artefacto se construya una sola vez por build, se identifique con el SHA del commit o una versión, y que la instancia responda ese identificador por HTTP junto con su ambiente. La implementación futura de `/api/health` debe incluir, como mínimo:
+El requisito oficial exige que el artefacto se construya una sola vez por build, se identifique con
+el SHA del commit o una versión, y que la instancia responda ese identificador por HTTP junto con su
+ambiente. La implementación actual de `/api/health` incluye:
 
 ```json
 {"estado": "ok", "ambiente": "ci", "version": "<SHA-completo-del-commit>"}
 ```
 
-Esto no existe en `app.py` todavía: la ruta y el cuerpo aprobados aún deben implementarse. La forma de inyectar la versión del artefacto sigue pendiente de implementación, aunque el requisito de exponerla sí es oficial.
+`app.py` toma `APP_AMBIENTE` y `APP_VERSION` por entorno; la ejecución local y el pipeline deben
+aportar valores esperados para acreditar el SHA desplegado.
 
 ## 5. Aislamiento de datos
 
+El flujo actual usa una cola por instancia y fixtures independientes. Las reglas siguientes
+conservan la estrategia de aislamiento definida durante la planificación y se contrastan con
+`tests/unit/`, `tests/integration/` y `tests/e2e/`.
+
 ### 5.1 Unitarias
 
-- Crear una cola nueva por prueba una vez extraída la lógica.
-- No reutilizar `cola_prioridad` ni `Paciente._contador` entre casos.
-- Mientras exista el global, limpiar la lista y restaurar el contador en un fixture de transición.
+- Crear una cola nueva por prueba mediante el servicio/fixture de la instancia.
+- No reutilizar estado de otra instancia ni de otro caso entre pruebas.
+- La referencia histórica a una cola global y a `Paciente._contador` corresponde a la base anterior;
+  no describe el flujo activo actual.
 - No depender del orden de ejecución de pytest.
 
 ### 5.2 Integración
@@ -213,11 +233,13 @@ Esto no existe en `app.py` todavía: la ruta y el cuerpo aprobados aún deben im
 - Cada ejecución Playwright debe crear su contexto y datos propios.
 - Ejecutar la app en un proceso y puerto controlados, con limpieza en `finally`/`post` incluso ante timeout.
 - Los ambientes `ci` y `staging` deben ser instancias distintas con la misma imagen/artefacto y configuración separada.
-- Si Docker/Compose es elegido, cada ambiente tendrá contenedor, puerto, red y variables propios. Si no, se requiere aislamiento equivalente.
+- Docker/Compose asigna a cada ambiente su contenedor, puerto, red y variables propios; la evidencia histórica documenta esa separación. Si el agente no dispone de Docker, se requiere aislamiento equivalente.
 
 ## 6. Matriz preliminar de pruebas unitarias
 
-Las pruebas de Ana deben apuntar a dominio/servicio, no a Flask. Los casos U-14 a U-18 dependen de centralizar la validación.
+Esta matriz conserva el diseño original de pruebas. La implementación y los resultados locales
+actuales se describen en `DECISIONES.md` y `EVIDENCIA.md`; no debe leerse como una lista de tareas
+pendientes.
 
 | ID | Caso | Entrada | Resultado verificable |
 |---|---|---|---|
@@ -243,7 +265,9 @@ Las pruebas de Ana deben apuntar a dominio/servicio, no a Flask. Los casos U-14 
 
 ## 7. Matriz preliminar de integración
 
-Juan debe ejecutar estas pruebas de caja negra contra la API en ejecución. Cada caso debe registrar la técnica que lo originó y la partición, límite o regla de decisión cubierta.
+Esta matriz conserva el diseño original de pruebas de caja negra. La suite actual y su trazabilidad
+por caso ejecutable están en `DECISIONES.md`; cada caso registra la técnica, partición, límite o
+regla de decisión cubierta.
 
 ### 7.1 Particiones de equivalencia
 
@@ -285,9 +309,11 @@ La tabla usa el contrato aprobado de la sección 4. Si el equipo necesita cambia
 
 ## 8. Estrategia E2E con Playwright y POM
 
-**Planificado:** usar Playwright con Python, por coherencia con el proyecto, y Page Object Model. El requisito oficial pide al menos tres recorridos, uno de ellos marcado como smoke.
+La estrategia se implementó con Playwright para Python y Page Object Model. La suite actual tiene
+17 casos por navegador, con smoke y regresión; las validaciones locales y sus límites están en
+`EVIDENCIA.md`. El requisito oficial pide al menos tres recorridos, uno de ellos marcado como smoke.
 
-### 8.1 Estructura propuesta
+### 8.1 Estructura implementada
 
 ```text
 tests/e2e/pages/hospital_dashboard_page.py
@@ -308,20 +334,24 @@ Los page objects deben usar los `data-testid` existentes: `register-form`, `pati
 3. **Eliminación y cola vacía.** Registrar varios, eliminar uno por `data-testid`, verificar reordenamiento, vaciar y verificar `empty-state` y mensaje.
 4. **Opcional: validación y responsive.** Probar entrada inválida en desktop, tablet y móvil; la cola debe quedar sin cambios.
 
-Cada recorrido crea un contexto y datos propios. Víctor debe guardar screenshots/traces cuando falle y registrar qué selector y estado verificó.
+Cada recorrido crea un contexto y datos propios. La configuración conserva screenshots/traces cuando
+falla y registra qué selector y estado verificó.
 
 ### 8.3 SOLID exigido para la justificación
 
-Antes de implementar, registrar en `DECISIONES.md` dos principios y su evidencia. Propuesta:
+La justificación implementada registra en `DECISIONES.md` dos principios y su evidencia:
 
 - **Single Responsibility:** `PatientForm` sólo encapsula registro y `PatientQueueView` sólo lectura/acciones de la cola; evita un page object monolítico y duplicación de selectores.
-- **Interface Segregation (candidato condicionado):** sólo puede justificarse si la implementación futura define abstracciones/interfaces concretas y cada consumidor depende de un subconjunto que necesita; dividir Page Objects no demuestra ISP por sí solo. Si no existe esa evidencia, el equipo debe sustituirlo por otro principio justificable y documentar la clase, la alternativa y el problema evitado.
+- **Interface Segregation:** `QueueReader` y `QueueActions` son Protocols separados, con fixtures y consumidores concretos. Dividir Page Objects por sí solo no se considera evidencia suficiente.
 
 La clase, el problema que evita y el test/build donde se observa deben quedar documentados. Recibir una dependencia por constructor, por sí solo, no cuenta como principio.
 
 ## 9. Jenkins, ambientes y gates
 
-El proyecto selecciona Jenkins, aunque la fuente oficial permite otros sistemas de CI. Esta sección es una propuesta; no se crea un `Jenkinsfile` todavía.
+El proyecto selecciona Jenkins, aunque la fuente oficial permite otros sistemas de CI. El
+`Jenkinsfile` existe y está versionado en el repositorio. Esta sección conserva el diseño operativo
+que debe cumplir el pipeline; el estado actual y las limitaciones de ejecución están en
+`EVIDENCIA.md`.
 
 ### 9.1 Flujo y artefacto único
 
@@ -345,17 +375,20 @@ El endpoint de health debe demostrar que la instancia responde el mismo SHA del 
 | `ci` | Validación por build/PR | Instancia, puerto, workspace, estado y artifacts propios |
 | `staging` | Smoke y demo | Otra instancia con la misma versión del artefacto, configuración, datos y puerto separados |
 
-**Docker/Compose es la opción propuesta para Juan**, porque facilita empaquetar una vez y levantar dos instancias. No es un requisito oficial explícito ni está implementado; debe confirmarse con la infraestructura disponible. Un aislamiento equivalente por procesos también debe cumplir versión, ambiente y puertos distinguibles.
+**Docker/Compose está implementado** para empaquetar una vez y levantar dos instancias. Existe
+evidencia histórica de ejecución en ambos ambientes; todavía falta un build del `HEAD` actual que
+acredite la operación completa. Un aislamiento equivalente por procesos también debe cumplir
+versión, ambiente y puertos distinguibles.
 
 ### 9.3 Parámetros
 
 Al lanzar el job se deben elegir el ambiente y al menos dos parámetros adicionales, con efecto observable; uno debe cambiar la suite o el navegador:
 
-| Parámetro | Valores/default propuesto | Efecto |
+| Parámetro | Valores/default vigente | Efecto |
 |---|---|---|
 | `ENVIRONMENT` | `ci` / `staging`; default `ci` | Selecciona instancia y configuración |
-| `SUITE` | `smoke` / `regression`; default `smoke` | Cambia qué pruebas se ejecutan |
-| `BROWSER` | `chromium` (y otro aprobado); default `chromium` | Cambia el navegador E2E |
+| `SUITE` | `smoke` / `regression`; default `regression` | Cambia qué pruebas se ejecutan |
+| `BROWSER` | `chromium` / `firefox`; default `chromium` | Cambia el navegador E2E |
 | `NOTIFY_EMAILS` | destinatario autorizado por defecto | Cambia destinatarios del correo |
 
 El umbral de cobertura debe fijarse y justificarse en `DECISIONES.md`; no se recomienda convertirlo en un parámetro libre que permita eludir el gate.
@@ -364,7 +397,12 @@ Cada commit en la rama principal debe disparar un build con los valores por defe
 
 ### 9.4 Correo SMTP
 
-Víctor preparará el correo real usando el plugin aprobado, por ejemplo Email Extension, pero el pipeline debe leer servidor, puerto, usuario y contraseña desde variables/credenciales inyectadas por Jenkins. La configuración global por sí sola no satisface la guía oficial. La contraseña no puede aparecer en logs ni repositorio. `NOTIFY_EMAILS` se puede cambiar al lanzar el build y debe tener un valor por defecto autorizado.
+El mecanismo SMTP está implementado con `scripts/notificar_fallo.py` y `smtplib`; el pipeline lee
+servidor, puerto, usuario y contraseña desde variables/credenciales inyectadas por Jenkins mediante
+Credentials Binding. No se usa ni se afirma configurado Email Extension. Los tests prueban el
+formato, validaciones, TLS y manejo de credenciales sin enviar mensajes reales: el envío y la
+recepción en un buzón siguen pendientes. La contraseña no puede aparecer en logs ni repositorio.
+`NOTIFY_EMAILS` se puede cambiar al lanzar el build y tiene un valor por defecto autorizado.
 
 El correo de fallo debe incluir número de build, SHA/commit, ambiente, etapa fallida y enlace al log. Debe enviarse también en timeout; si SMTP falla, se conservan artifacts y se registra el fallo operativo.
 
@@ -383,7 +421,10 @@ La demo debe romper código de aplicación, no desactivar una prueba. El cambio 
 
 ## 10. Responsabilidades y evidencias
 
-La distribución es exclusiva y debe mantenerse en los PRs. Los tres integrantes deben escribir pruebas, modificar una parte real del pipeline y tener al menos tres commits propios; la fuente oficial también exige que autor y correo Git correspondan a quien escribió cada commit.
+La distribución siguiente documenta la asignación histórica de trabajo y los entregables esperados;
+no describe tareas todavía sin implementar. Los tres integrantes deben tener al menos tres commits
+propios en la entrega final; la fuente oficial también exige que autor y correo Git correspondan a
+quien escribió cada commit.
 
 ### Ana Sofía — lógica, unitarias, cobertura y gate unitario/calidad
 
@@ -416,6 +457,9 @@ Cada integrante debe tener como mínimo tres commits propios en el historial del
 
 ## 11. Dependencias y trabajo en ramas sin conflictos
 
+Esta sección conserva la secuencia histórica de integración de ramas. El pipeline actual ya está
+integrado en `main`; las comprobaciones operativas pendientes se detallan en `EVIDENCIA.md`.
+
 ### 11.1 Dependencias
 
 1. Ana documenta y estabiliza la semántica interna de `Patient`/`PatientQueue`/`PatientService` y su fixture, respetando el contrato aprobado.
@@ -434,11 +478,12 @@ feat/juan-api-integration  -> API, tests/integration/, Docker/ambientes
 feat/victor-e2e-demo       -> tests/e2e/, POM, notificaciones/evidencias
 ```
 
-El `Jenkinsfile` será integrado progresivamente para evitar conflictos entre las ramas de los tres integrantes.
+Históricamente, el `Jenkinsfile` se integró progresivamente para evitar conflictos entre las ramas
+de los tres integrantes.
 
-1. **Ana Sofía:** crea la estructura inicial del `Jenkinsfile` y configura las etapas de pruebas unitarias, cobertura y calidad.
-2. **Juan Pablo:** después de integrar la rama de Ana, actualiza su rama desde `main` y agrega las etapas de construcción del artefacto, despliegue, ambientes y pruebas de integración.
-3. **Víctor:** después de integrar la rama de Juan Pablo, actualiza su rama desde `main` y agrega las etapas E2E, publicación de reportes y notificaciones SMTP.
+1. **Ana Sofía:** creó la estructura inicial del `Jenkinsfile` y configuró las etapas de pruebas unitarias, cobertura y calidad.
+2. **Juan Pablo:** después de integrar la rama de Ana, agregó las etapas de construcción del artefacto, despliegue, ambientes y pruebas de integración.
+3. **Víctor:** después de integrar la rama de Juan Pablo, agregó las etapas E2E, publicación de reportes y notificaciones SMTP.
 4. Cada integrante debe realizar personalmente sus modificaciones, probar su etapa y generar commits propios.
 5. Los cambios al pipeline se integran mediante Pull Requests en el orden Ana → Juan Pablo → Víctor. Nadie debe sobrescribir las etapas de otro integrante.
 
@@ -458,45 +503,46 @@ No se eliminan aquí: actualmente forman una interfaz de consola separada y reti
 
 ## 13. Matriz de requisitos verificables
 
-| ID | Requisito | Evidencia futura | Estado |
+| ID | Requisito | Evidencia disponible o pendiente | Estado |
 |---|---|---|---|
-| RQ-01 | Prioridad 1–5 | U-01–U-05, límites U-14–U-16 | Implementado en web; pruebas planificadas |
+| RQ-01 | Prioridad 1–5 | Unitarias y `tests/integration/test_alta_pacientes.py` | Implementado y probado localmente |
 | RQ-02 | Menor número = mayor urgencia | U-06 y matriz de integración | Implementado |
-| RQ-03 | FIFO en empate | U-07–U-09 y E2E 2 | Implementado; pruebas planificadas |
-| RQ-04 | Cola vacía sin mutación | U-10/U-11, integración y E2E 3 | Implementado en web |
-| RQ-05 | Eliminar objetivo | U-12/U-13 e integración | Implementado por nombre en HTML; API planificada con `id` aprobado |
-| RQ-06 | Lógica aislable | `PatientQueue`, servicio y fixtures | Planificado |
-| RQ-07 | API HTTP probada en ejecución | Contrato aprobado y tests de Juan | Planificado; implementación pendiente |
-| RQ-08 | Tres E2E mínimo, uno smoke | Playwright/POM y artifacts | Requisito oficial; planificado |
-| RQ-09 | Unitarias con cobertura y gate | JUnit, cobertura y build rojo | Requisito oficial; planificado |
-| RQ-10 | Integración de caja negra con técnicas | Matrices y requests HTTP | Requisito oficial; planificado |
-| RQ-11 | Artefacto único identificado por SHA | Log, health y build | Requisito oficial; planificado |
-| RQ-12 | Dos ambientes seleccionables | Build en `ci` y `staging` con misma versión | Requisito oficial; nombres son propuesta |
-| RQ-13 | Ambiente + dos parámetros, uno de suite/navegador | Parámetros y reportes | Requisito oficial; planificado |
-| RQ-14 | Correo con build, SHA, ambiente, etapa y log | Correo real y evidencia | Requisito oficial; SMTP pendiente |
-| RQ-15 | Tres commits por persona y autor verificable | Historial del SHA entregado | Requisito oficial; pendiente de ejecución |
-| RQ-16 | `DECISIONES.md`, `EVIDENCIA.md`, `evidencia/` | Archivos y capturas | Requisito oficial; no existen todavía |
-| RQ-17 | Tag y archivo de MIU con URL, tag y SHA completo | Entrega final | Requisito oficial; pendiente |
-| RQ-18 | Demo con falla real y correo | Builds verde/rojo/verde y correo | Requisito oficial; pendiente |
-| RQ-19 | Decisiones justificadas y uso transparente de IA | `DECISIONES.md` con alternativas, concepto, evidencia, fuente IEEE y tres sugerencias de IA aceptadas/rechazadas | Requisito oficial; pendiente |
-| RQ-20 | Evidencia trazable | `EVIDENCIA.md` con builds verde/rojo/verde, SHA, ambos ambientes, gate de cobertura, etapa/prueba fallida y conteo por capa; capturas en `evidencia/` | Requisito oficial; pendiente |
+| RQ-03 | FIFO en empate | Unitarias, integración, E2E y matriz de `DECISIONES.md` | Implementado y probado localmente |
+| RQ-04 | Cola vacía sin mutación | Unitarias, integración y E2E | Implementado y probado localmente |
+| RQ-05 | Eliminar objetivo por ID | API, HTML, pruebas de regresión y E2E | Implementado y probado localmente |
+| RQ-06 | Lógica aislable | `PatientQueue`, servicio, `create_app` por instancia y fixtures | Implementado; Jenkins multi-job aún no acreditado |
+| RQ-07 | API HTTP probada en ejecución | `tests/integration/`: 71 casos contra HTTP real | Implementado y probado localmente |
+| RQ-08 | Tres E2E mínimo, uno smoke | Playwright/POM; 17 casos por navegador y smoke | Implementado y probado localmente |
+| RQ-09 | Unitarias con cobertura y gate | `Jenkinsfile`, gate 90 sobre `domain`/`services`; XML históricos en `evidencia/` | Implementado; nueva ejecución Jenkins pendiente |
+| RQ-10 | Integración de caja negra con técnicas | Matriz trazable en `DECISIONES.md`; 71 casos parametrizados | Implementado y probado localmente |
+| RQ-11 | Artefacto único identificado por SHA | `Jenkinsfile`, `Dockerfile`, Compose y scripts | Implementado en código; build actual pendiente |
+| RQ-12 | Dos ambientes seleccionables | Perfiles `ci`/`staging` y parámetros en `Jenkinsfile` | Implementado en código; build actual pendiente |
+| RQ-13 | Ambiente + dos parámetros, uno de suite/navegador | `ENVIRONMENT`, `SUITE`, `BROWSER` y `NOTIFY_EMAILS` | Implementado en código; operación Jenkins pendiente |
+| RQ-14 | Correo con build, SHA, ambiente, etapa y log | `scripts/notificar_fallo.py`, `withCredentials`, tests sin buzón real | Parcial; correo real pendiente |
+| RQ-15 | Tres commits por persona y autor verificable | Historial Git del commit que se entregue | No verificable como entrega final hasta definir tag/MIU |
+| RQ-16 | `DECISIONES.md`, `EVIDENCIA.md`, `evidencia/` | Archivos presentes y enlaces revisados | Implementado; evidencia clasificada por fecha/SHA |
+| RQ-17 | Tag y archivo de MIU con URL, tag y SHA completo | Entrega final | Pendiente |
+| RQ-18 | Demo con falla real y correo | Guion y ensayos locales; no hay secuencia Jenkins ni correo real | Parcial; evidencia Jenkins pendiente |
+| RQ-19 | Decisiones justificadas y uso transparente de IA | `DECISIONES.md`: alternativas, concepto, evidencia, fuentes y ocho sugerencias aceptadas/rechazadas | Implementado documentalmente |
+| RQ-20 | Evidencia trazable | `EVIDENCIA.md`: SHA, conteos, límites, plantilla de builds y pendientes | Parcial; faltan builds Jenkins identificables |
 
 ## 14. Confirmaciones y preguntas abiertas
 
 La fuente oficial confirma el objetivo general, pero no decide por el equipo:
 
-1. ¿Qué interfaces internas de inyección, asignación del `id` único, DTOs y mapeo de errores necesita la implementación, sin alterar el contrato REST aprobado?
-2. ¿Cómo se mapeará la eliminación HTML actual por nombre al `id` aprobado de la API sin cambiar las rutas existentes?
-3. ¿Qué porcentaje de cobertura se justifica en `DECISIONES.md` y qué módulos quedan fuera?
-4. ¿Docker/Compose estará disponible o se usará aislamiento equivalente?
-5. ¿Qué servidor SMTP, credenciales inyectadas y dirección autorizada se usarán en la demo?
-6. ¿Qué navegador adicional, si alguno, estará disponible en Jenkins?
-7. ¿El CLI sigue en alcance o se retira después de la entrega?
-8. La fuente oficial describe 2–3 pantallas como el tamaño orientativo de un sistema nuevo; ¿se espera alguna pantalla adicional o el dashboard actual es suficiente para esta base existente?
+1. **Resuelto en la implementación:** las interfaces internas, la asignación del `id` único, los DTOs y el mapeo de errores se encuentran en `domain/`, `services/`, `api/` y `app.py`, sin alterar el contrato REST aprobado.
+2. ¿Qué servidor SMTP, credenciales inyectadas y dirección autorizada se usarán en la demo?
+3. ¿Qué navegador adicional, si alguno, estará disponible en Jenkins?
+4. ¿El CLI sigue en alcance o se retira después de la entrega?
+5. La fuente oficial describe 2–3 pantallas como el tamaño orientativo de un sistema nuevo; ¿se espera alguna pantalla adicional o el dashboard actual es suficiente para esta base existente?
 
 No se deben inventar respuestas para estas preguntas. Registrar la decisión y su evidencia antes de implementar las capas dependientes.
 
 ## 15. Entregables oficiales y orden futuro
+
+El orden siguiente conserva la secuencia original de trabajo; no representa tareas de código aún no
+implementadas. Los pendientes operativos y de entrega están en la matriz de la sección 13 y en
+`EVIDENCIA.md`.
 
 La fuente oficial solicita, además del código, README con sistema/ambientes/parámetros, `DECISIONES.md`, `EVIDENCIA.md`, carpeta `evidencia/`, un tag público y un archivo en MIU con enlace, tag y SHA completo. `DECISIONES.md` debe justificar alternativas, conceptos del curso, evidencia y fuentes IEEE, además de tres sugerencias de IA aceptadas o rechazadas. `EVIDENCIA.md` debe trazar builds verde/rojo/verde, SHA, ambientes, cobertura, etapa/prueba fallida y cantidad de pruebas por capa. La demo parte del commit entregado, muestra un build verde, los dos ambientes, una falla real por capa y el correo recibido; el commit de ruptura de demo no se califica.
 
@@ -512,4 +558,7 @@ Orden recomendado:
 
 La fuente oficial marca como meta de tiempo, no como punto de calificación, que un build tarde menos de tres minutos con dependencias en caché.
 
-Hasta entonces, este archivo y `docs/GUIA_AGENTES_PROYECTO_FINAL.md` son documentación de trabajo; no implican que alguna de esas piezas ya exista.
+Este archivo conserva decisiones de planificación y ahora señala el estado observado de cada
+requisito. La evidencia operacional de Jenkins/SMTP debe completarse en `EVIDENCIA.md`; hasta
+entonces, el código del pipeline no se presenta como una ejecución verificable desde un Jenkins
+limpio.
