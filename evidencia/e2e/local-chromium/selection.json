@@ -1,0 +1,6 @@
+{
+  "suite": "regression",
+  "browser": "chromium",
+  "commit": "18801fa370e8089c662d33e29e85b88e3a25869e",
+  "url": "servidor HTTP local en puerto din\u00e1mico"
+}

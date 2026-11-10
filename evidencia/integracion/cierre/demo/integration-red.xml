@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="3" time="0.265" timestamp="2026-11-09T19:30:44.784992-06:00" hostname="Victors-MacBook-Pro.local"><testcase classname="tests.integration.test_alta_pacientes" name="test_alta_valida_devuelve_201_con_paciente_y_posicion" time="0.218"><failure message="assert 200 == 201&#10; +  where 200 = &lt;api_client.Respuesta object at 0x10532ef60&gt;.status">api = &lt;api_client.ApiClient object at 0x10529ac90&gt;
+
+    @pytest.mark.smoke
+    def test_alta_valida_devuelve_201_con_paciente_y_posicion(api):
+        respuesta = api.registrar("Ana López", 2)
+    
+&gt;       assert respuesta.status == 201
+E       assert 200 == 201
+E        +  where 200 = &lt;api_client.Respuesta object at 0x10532ef60&gt;.status
+
+tests/integration/test_alta_pacientes.py:12: AssertionError</failure></testcase><testcase classname="tests.integration.test_atender_pacientes" name="test_atender_entrega_al_paciente_mas_urgente" time="0.003" /><testcase classname="tests.integration.test_health" name="test_health_responde_ok_con_ambiente_y_version" time="0.003" /></testsuite></testsuites>

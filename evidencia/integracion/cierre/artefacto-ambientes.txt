@@ -1,0 +1,21 @@
+{
+  "sha": "4010a7e3a09e6d39605932355a226c5dacad7c2a",
+  "images": [
+    "sha256:13947d717d7cf433b90e02500d6871776753cb36d89962dbe5b62796989de968",
+    "sha256:13947d717d7cf433b90e02500d6871776753cb36d89962dbe5b62796989de968"
+  ],
+  "aislamiento": {
+    "ci": 1,
+    "staging": 0
+  },
+  "ci": {
+    "ambiente": "ci",
+    "estado": "ok",
+    "version": "4010a7e3a09e6d39605932355a226c5dacad7c2a"
+  },
+  "staging": {
+    "ambiente": "staging",
+    "estado": "ok",
+    "version": "4010a7e3a09e6d39605932355a226c5dacad7c2a"
+  }
+}

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="11.594" timestamp="2026-11-09T19:30:45.843771-06:00" hostname="Victors-MacBook-Pro.local"><testcase classname="tests.e2e.test_smoke_registration" name="test_registro_y_listado_persisten_al_recargar[chromium]" time="11.469"><properties><property name="playwright_screenshot" value="/Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/reports/demo/e2e-red/artifacts/tests-e2e-test-smoke-registration-py-test-registro-y-listado-persisten-al-recargar-chromium/test-failed-1.png" /><property name="playwright_trace" value="/Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/reports/demo/e2e-red/artifacts/tests-e2e-test-smoke-registration-py-test-registro-y-listado-persisten-al-recargar-chromium/trace.zip" /></properties><failure message="playwright._impl._errors.TimeoutError: Locator.click: Timeout 10000ms exceeded.&#10;Call log:&#10;  - waiting for get_by_test_id(&quot;register-patient-button&quot;)">dashboard = &lt;pages.hospital_dashboard_page.HospitalDashboardPage object at 0x107881850&gt;
+queue = &lt;pages.patient_queue_view.PatientQueueView object at 0x107882870&gt;
+patient_name = 'Paciente registro y listado persisten al recargar'
+
+    def test_registro_y_listado_persisten_al_recargar(dashboard, queue, patient_name):
+        queue.expect_empty()
+&gt;       dashboard.form.register(patient_name, 3)
+
+tests/e2e/test_smoke_registration.py:10: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/e2e/pages/patient_form.py:17: in register
+    self.submit_button.click()
+/Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:11045: in click
+    self._sync(
+/Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/.venv/lib/python3.12/site-packages/playwright/_impl/locator.py:222: in click
+    return await self._frame.click(
+/Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/.venv/lib/python3.12/site-packages/playwright/_impl/frame.py:587: in click
+    return await self._channel.click(
+/Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/.venv/lib/python3.12/site-packages/playwright/_impl/channel_owner.py:387: in finish
+    raise e from None
+/Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/.venv/lib/python3.12/site-packages/playwright/_impl/channel_owner.py:352: in finish
+    result = await zone.run_async(lambda: awaitable)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;playwright._impl.utils.zones.Zone object at 0x10796b3e0&gt;
+func = &lt;function ChannelOwner._wrap_api_call.&lt;locals&gt;.finish.&lt;locals&gt;.&lt;lambda&gt; at 0x107946de0&gt;
+
+    async def run_async(self, func: Callable[[], Awaitable[R]]) -&gt; R:
+        # Python: run() of an async function. The coroutine runs when it is awaited,
+        # so the zone must be current while it is awaited, not while it is created.
+        token = _async_local_storage.set(self)
+        try:
+&gt;           return await func()
+                   ^^^^^^^^^^^^
+E           playwright._impl._errors.TimeoutError: Locator.click: Timeout 10000ms exceeded.
+E           Call log:
+E             - waiting for get_by_test_id("register-patient-button")
+
+/Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/.venv/lib/python3.12/site-packages/playwright/_impl/utils/zones.py:58: TimeoutError</failure></testcase></testsuite></testsuites>
