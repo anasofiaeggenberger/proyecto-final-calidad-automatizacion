@@ -10,4 +10,5 @@ reports
 tests
 Jenkinsfile
 requirements-ci.txt
+!requirements-ci.txt
 requirements-dev.txt

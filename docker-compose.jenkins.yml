@@ -1,0 +1,34 @@
+name: hospital-jenkins-repro
+
+services:
+  jenkins:
+    build:
+      context: .
+      dockerfile: infra/jenkins/Dockerfile
+    image: hospital-jenkins:2.541.3-firefox-arm64
+    platform: linux/arm64
+    container_name: hospital-jenkins-repro
+    user: jenkins
+    network_mode: host
+    restart: "no"
+    environment:
+      JENKINS_HTTP_PORT: "${JENKINS_HTTP_PORT:-8091}"
+      JENKINS_OPTS: "--httpPort=${JENKINS_HTTP_PORT:-8091}"
+      PLAYWRIGHT_BROWSERS_PATH: /opt/ms-playwright
+    group_add:
+      - "${DOCKER_SOCKET_GID:?Set DOCKER_SOCKET_GID to the numeric GID of the Docker socket}"
+    volumes:
+      - hospital-jenkins-repro-home:/var/jenkins_home
+      - type: bind
+        source: "${DOCKER_SOCKET_PATH:?Set DOCKER_SOCKET_PATH to the Docker socket path}"
+        target: /var/run/docker.sock
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:$${JENKINS_HTTP_PORT}/login >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+volumes:
+  hospital-jenkins-repro-home:
+    name: hospital-jenkins-repro-home

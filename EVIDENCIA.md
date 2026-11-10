@@ -1,11 +1,28 @@
 # Evidencia de ejecución
 
-> **Estado documental:** `main` está en `299c7b3b41355606e6bf59670cf1ae3cf09ac5d1`.
-> Este documento separa resultados locales recientes, evidencia histórica y comprobaciones aún
-> pendientes. Un reporte, captura o archivo XML no demuestra por sí solo que el `HEAD` actual haya
-> sido ejecutado por Jenkins.
+> **Estado documental:** `main` está en `fdceef069d2a2c33894f0982d1dde38b90330e1f`.
+> Este documento separa ejecuciones Jenkins reales, resultados locales, evidencia histórica y
+> comprobaciones aún pendientes. Un reporte, captura o archivo XML no demuestra por sí solo que
+> un `HEAD` distinto haya sido ejecutado por Jenkins.
 
-## 1. Resultado local reciente
+## 1. Ejecuciones Jenkins reales sobre el HEAD actual
+
+Los artefactos de Build #4, #5 y #6 conservan el commit completo
+`fdceef069d2a2c33894f0982d1dde38b90330e1f` en `reports/build/artefacto.txt`. Los resultados y
+parámetros se verificaron en los metadatos de la instancia Jenkins temporal
+`jenkins-hospital-review-firefox`.
+
+| Build | Ambiente | Suite | Navegador | Resultado | Pruebas y cobertura observadas | Límite de la evidencia |
+|---:|---|---|---|---|---|---|
+| #4 | `ci` | `regression` | Chromium | SUCCESS | No se replica aquí un conteo numérico no requerido para esta corrección | Evidencia de instancia temporal; conservar su consola y artefactos como fuente primaria |
+| #5 | `staging` | `smoke` | Firefox | FAILURE | Ruff, 72 unitarias, 35 notificaciones/pipeline, cobertura de `domain`/`services`, Docker Build, Deploy, Health Gate y 3 integración smoke superaron; Firefox no arrancó por bibliotecas Linux ausentes | El fallo fue de infraestructura del navegador; cleanup reportado como correcto |
+| #6 | `staging` | `smoke` | Firefox | SUCCESS | 72 unitarias, 35 notificaciones/pipeline, 3 integración smoke, 1 E2E Firefox smoke y 99.19 % de `domain`/`services` | La cobertura no representa toda la aplicación; no prueba Jenkins limpio ni SMTP real |
+
+La cobertura `99.19 %` de #6 corresponde exclusivamente a los módulos `domain` y `services`.
+No incluye Flask, API, HTML ni scripts. Los Builds #4–#6 no demuestran el envío y recepción de
+un correo SMTP real ni una secuencia intencional verde → roja → verde.
+
+## 2. Resultado local reciente
 
 La siguiente validación se realizó después de corregir la eliminación HTML por ID, en el working
 tree que posteriormente se consolidó en `299c7b3`. Los manifiestos `selection.json` disponibles
@@ -44,7 +61,7 @@ La colección actual de `tests/integration/` contiene 71 casos ejecutables:
 La matriz de técnicas y casos se encuentra en [DECISIONES.md](DECISIONES.md), sección “Matriz de
 trazabilidad de integración”.
 
-## 2. Evidencia histórica identificable
+## 3. Evidencia histórica identificable
 
 ### Build #3 de Jenkins temporal
 
@@ -78,7 +95,7 @@ Los artefactos históricos conservan valor como evidencia de los ensayos que des
 SHAs, fechas y ambientes deben acompañarlos siempre. No se mezclan con los resultados locales de
 la sección 1.
 
-## 3. Afirmaciones implementadas pero aún no acreditadas operativamente
+## 4. Afirmaciones implementadas pero aún no acreditadas operativamente
 
 | Requisito | Implementación inspeccionable | Evidencia operativa faltante | Estado |
 |---|---|---|---|
@@ -92,20 +109,19 @@ la sección 1.
 Los tests de notificaciones prueban formato, validaciones, TLS y manejo de credenciales sin enviar
 mensajes reales. Por eso “tests SMTP en verde” no equivale a “correo recibido”.
 
-## 4. Plantilla para completar con evidencia Jenkins real
+## 5. Plantilla para completar con evidencia Jenkins real
 
-No se rellenan celdas con números, enlaces o SHAs que no existan. Cada fila deberá conservar el
-log/artefacto y el checkout exacto que la produjo.
+Las tres primeras filas ya corresponden a builds observados. No se rellenan celdas con enlaces,
+números o SHAs que no existan; cada fila conserva el checkout exacto que la produjo.
 
 | Build | Ambiente | Parámetros (`ENVIRONMENT`, `SUITE`, `BROWSER`) | SHA completo | Resultado/etapa | Prueba o fallo | Enlace de consola | Artefactos | SMTP recibido |
 |---|---|---|---|---|---|---|---|---|
-| pendiente | `ci` | `ci`, `regression`, `chromium` | pendiente | verde | — | pendiente | JUnit, coverage, health, E2E | no verificado |
-| pendiente | `staging` | `staging`, `smoke`, `firefox` | pendiente | verde | — | pendiente | JUnit, health, E2E | no verificado |
-| pendiente | `ci` | parámetros del build | pendiente | rojo | etapa/prueba real pendiente | pendiente | log y reportes del fallo | pendiente |
-| pendiente | `ci` | parámetros del build | pendiente | verde restaurado | — | pendiente | reportes posteriores | no verificado |
+| #4 | `ci` | `ci`, `regression`, `chromium` | `fdceef069d2a2c33894f0982d1dde38b90330e1f` | verde | Conteo numérico no consignado aquí | no versionado | `reports/build/artefacto.txt` y reportes del build | no verificado |
+| #5 | `staging` | `staging`, `smoke`, `firefox` | `fdceef069d2a2c33894f0982d1dde38b90330e1f` | rojo en E2E | Bibliotecas Linux de Firefox ausentes | no versionado | log, health, integración smoke y reportes del build | no verificado |
+| #6 | `staging` | `staging`, `smoke`, `firefox` | `fdceef069d2a2c33894f0982d1dde38b90330e1f` | verde | 72 unitarias, 35 notificaciones/pipeline, 3 integración smoke, 1 E2E Firefox smoke | no versionado | JUnit, cobertura, health, E2E y `reports/build/artefacto.txt` | no verificado |
 | pendiente | `ci` o `staging` | parámetros del build | pendiente | abortado/timeout | etapa real pendiente | pendiente | log, cleanup, notificación | pendiente |
 
-## 5. Fuentes y reproducibilidad
+## 6. Fuentes y reproducibilidad
 
 - Pipeline, orden de etapas, gate de cobertura, Health Gate, publicación y cleanup: [`Jenkinsfile`](Jenkinsfile).
 - Requisitos del agente y límites de la evidencia Jenkins temporal: [`docs/JENKINS.md`](docs/JENKINS.md).

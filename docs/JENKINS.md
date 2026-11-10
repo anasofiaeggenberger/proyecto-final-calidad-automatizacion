@@ -1,52 +1,120 @@
 # Jenkins y notificaciones
 
 > **Estado:** el pipeline conserva los gates de calidad, construcción, despliegue,
-> health, integración y E2E. El cambio de Playwright de esta rama sólo evita instalar
-> paquetes del sistema durante un build Jenkins sin privilegios root.
+> health, integración y E2E. Esta documentación distingue la infraestructura versionada
+> de la evidencia histórica de Jenkins y de las verificaciones aún pendientes.
+
+## Agente reproducible versionado
+
+La aplicación usa el `Dockerfile` de la raíz para construir el artefacto Flask. El agente
+Jenkins reproducible está separado en [`infra/jenkins/Dockerfile`](../infra/jenkins/Dockerfile)
+y [`docker-compose.jenkins.yml`](../docker-compose.jenkins.yml). La receta está fijada para
+`linux/arm64` y contiene:
+
+- Jenkins `2.541.3-jdk21` fijado por digest.
+- Python 3.12.12 administrado por uv, uv, Git y `python3`.
+- Docker CLI `29.9.2` y Docker Compose plugin `5.7.0`, fijados por versión.
+- Las bibliotecas de sistema necesarias para Firefox de Playwright 1.65.0.
+- Firefox descargado en la imagen para que los paquetes del sistema no se instalen durante
+  cada build.
+- Los plugins utilizados por el Jenkinsfile, con sus versiones declaradas en
+  [`infra/jenkins/plugins.txt`](../infra/jenkins/plugins.txt).
+
+La receta es reproducible, pero no se debe presentar como un build limpio verificado hasta
+construirla y validarla en un entorno separado. Esta documentación no reemplaza la evidencia
+real de los Builds #4, #5 y #6.
+
+Durante la construcción local de esta receta, `jenkins-plugin-cli` reportó advisories sobre las
+versiones transitivas `workflow-multibranch:841.vec5b_9e1806ec` (SECURITY-3729) y
+`pipeline-groovy-lib:798.v5cc688825312` (SECURITY-3815 y SECURITY-3796). La imagen se construyó
+y validó funcionalmente, pero no se declara libre de vulnerabilidades; antes de usarla fuera de
+esta entrega se deben actualizar los plugins afectados y repetir la validación.
+
+### Construcción y arranque aislados
+
+La instancia de ejemplo usa el puerto `8091`, el contenedor `hospital-jenkins-repro` y el
+volumen nuevo `hospital-jenkins-repro-home`. No reutiliza `jenkins-hospital-review-home` ni
+ningún otro volumen histórico. Se utiliza `network_mode: host` porque el pipeline despliega
+la aplicación en loopback; el aislamiento de esta receta es de estado, contenedor, puerto y
+volumen. En Docker Desktop, la compatibilidad del modo host debe estar habilitada.
+
+Primero se debe obtener el socket y su GID numérico en el host. No se asume que el GID sea
+`0`:
+
+```bash
+# Docker Desktop sobre macOS
+export DOCKER_SOCKET_PATH=/run/host-services/docker.proxy.sock
+test -S "$DOCKER_SOCKET_PATH"
+export DOCKER_SOCKET_GID="$(stat -f '%g' "$DOCKER_SOCKET_PATH")"
+
+# Linux (usar en lugar del bloque anterior)
+# export DOCKER_SOCKET_PATH=/var/run/docker.sock
+# test -S "$DOCKER_SOCKET_PATH"
+# export DOCKER_SOCKET_GID="$(stat -c '%g' "$DOCKER_SOCKET_PATH")"
+
+export JENKINS_HTTP_PORT=8091
+docker compose -f docker-compose.jenkins.yml config --quiet
+docker compose -f docker-compose.jenkins.yml build
+docker compose -f docker-compose.jenkins.yml up -d
+curl -fsS -o /dev/null -w 'HTTP %{http_code}\n' \
+  "http://127.0.0.1:${JENKINS_HTTP_PORT}/login"
+```
+
+`group_add` agrega sólo el GID del socket al proceso `jenkins`. La pertenencia al grupo del
+socket concede acceso equivalente a Docker y debe limitarse a este agente temporal; no se
+debe reemplazar por `chmod 666`, `chmod 777` ni por ejecutar Jenkins como root. Si el host
+utiliza otra ruta de socket, se debe cambiar únicamente la variable de entorno.
+
+Validaciones no destructivas después del arranque:
+
+```bash
+docker compose -f docker-compose.jenkins.yml exec jenkins id -u
+docker compose -f docker-compose.jenkins.yml exec jenkins id -g
+docker compose -f docker-compose.jenkins.yml exec jenkins id -G
+docker compose -f docker-compose.jenkins.yml exec jenkins docker version
+docker compose -f docker-compose.jenkins.yml exec jenkins docker compose version
+docker compose -f docker-compose.jenkins.yml exec jenkins \
+  sh -c 'ldconfig -p | grep -E "lib(Xcursor|gtk-3|gdk-3|pangocairo|cairo-gobject|gdk_pixbuf)"'
+```
+
+Desde la interfaz de Jenkins se crea el primer usuario y luego un Pipeline from SCM con el
+repositorio del proyecto, la rama `*/main` y el script `Jenkinsfile`. La configuración del
+job no se incorpora al volumen ni a este archivo. Las credenciales SMTP se cargan sólo desde
+Jenkins con los IDs documentados abajo; nunca se guardan en Compose, Git o argumentos.
+
+Para detener la instancia sin borrar su volumen:
+
+```bash
+docker compose -f docker-compose.jenkins.yml down
+```
+
+No usar `down -v` como limpieza rutinaria: eliminaría el volumen `hospital-jenkins-repro-home`
+y la configuración de esta instancia. La imagen y el volumen son independientes del Jenkins
+histórico y de los contenedores `jenkins` y `jenkins-parcial-2`.
 
 ## Requisitos del agente
 
-El agente que ejecute este job debe tener:
+El agente que ejecute este job debe tener los requisitos incluidos en la receta anterior, o
+una imagen equivalente aprobada:
 
-- Python 3.12 y python3 en PATH (el post de notificación usa python3).
+- Python 3.12 y `python3` en PATH (el post de notificación usa `python3`).
 - uv, Git, Docker Engine y el plugin Compose v2.
 - Acceso controlado al daemon Docker, por socket o por la configuración aprobada del nodo.
-- Un workspace exclusivo o aislado para este job. El Jenkinsfile usa agent any, por lo
+- Un workspace exclusivo o aislado para este job. El Jenkinsfile usa `agent any`, por lo
   que la administración de Jenkins debe impedir que el job caiga en un nodo sin estos
   requisitos.
 - Los plugins Pipeline/Declarative, Git, JUnit, Credentials Binding y HTML Publisher.
 
-El Dockerfile de la raíz construye la aplicación, no una imagen de agente Jenkins. No hay
-una imagen de agente Jenkins versionada en este repositorio. La solución mínima reproducible
-es mantener una imagen de agente aprobada por Infraestructura, fijada por digest, que incluya
-Python 3.12, uv, Docker/Compose y las bibliotecas del navegador. Durante la construcción
-de esa imagen, con privilegios de build, debe ejecutarse el equivalente a:
-
-~~~
-COPY requirements-ci.txt requirements-e2e.txt /opt/deps/
-RUN uv venv --python 3.12 /opt/venv \
- && uv pip sync --python /opt/venv/bin/python /opt/deps/requirements-ci.txt \
- && uv pip install --python /opt/venv/bin/python --require-hashes \
-      -r /opt/deps/requirements-e2e.txt \
- && /opt/venv/bin/python -m playwright install --with-deps chromium firefox
-~~~
-
-La base concreta debe ser una imagen Jenkins compatible con el modelo de agente utilizado
-(SSH, inbound o Docker cloud), y debe fijarse por digest en la infraestructura del equipo.
-No se agrega una imagen incompleta al repositorio de la aplicación: elegir una base o un
-modelo de conexión inexistente haría que la receta no fuera reproducible. La instalación
-con --with-deps queda exclusivamente en la construcción de esa imagen, nunca en cada build.
-
-En el job, Setup Python puede seguir creando .venv y sincronizando los requirements
-hash-pinned del workspace. En E2E Tests, el Jenkinsfile ejecuta sólo:
+En el job, Setup Python sigue creando `.venv` y sincronizando los requirements hash-pinned del
+workspace. En E2E Tests, el Jenkinsfile ejecuta sólo:
 
 ~~~
 python -m playwright install "$BROWSER"
 ~~~
 
-Esto instala el navegador seleccionado para la versión de Playwright del proyecto; no intenta
-instalar paquetes OS ni requiere root. Si la imagen precarga también los navegadores, se debe
-conservar la misma versión de Playwright y comprobar el cache antes de presentar el build.
+Esto comprueba o completa el navegador seleccionado para la versión de Playwright del
+proyecto; no intenta instalar paquetes OS ni requiere root. La imagen versionada ya instala
+las bibliotecas Linux y precarga Firefox durante su construcción.
 
 ## Job, polling y parámetros
 
@@ -100,11 +168,27 @@ health; y el reporte HTML E2E junto con screenshots, traces y metadatos. Si Jenk
 JavaScript del HTML, descargar el artefacto para verlo localmente; no relajar la seguridad
 global.
 
-La evidencia aportada para el cierre informa un Build #3 exitoso con Ruff, 67 unitarias,
-35 pruebas de notificaciones/pipeline, 71 de integración, 17 E2E Chromium, cobertura
-99.19 %, deploy/health/cleanup Docker y reportes publicados. Ese dato es evidencia de una
-instancia temporal y no una ejecución reproducida en este checkout. Tampoco prueba el envío
-o la recepción de un correo SMTP real.
+## Ejecuciones Jenkins verificadas
+
+Los Builds #4, #5 y #6 de la instancia temporal activa ejecutaron el commit
+`fdceef069d2a2c33894f0982d1dde38b90330e1f`. Los artefactos `reports/build/artefacto.txt` de
+cada build conservan el SHA, el ambiente y la suite; el resultado y los parámetros se
+verificaron en la configuración de cada build.
+
+| Build | Ambiente | Suite | Navegador | Resultado | Evidencia concreta |
+|---:|---|---|---|---|---|
+| #4 | `ci` | `regression` | Chromium | SUCCESS | Checkout y artefacto del SHA completo; el detalle numérico de pruebas no se replica aquí |
+| #5 | `staging` | `smoke` | Firefox | FAILURE | Ruff, unitarias, notificaciones, cobertura, Docker, deploy, Health Gate e integración smoke superaron; Firefox falló por bibliotecas Linux ausentes |
+| #6 | `staging` | `smoke` | Firefox | SUCCESS | 72 unitarias, 35 notificaciones/pipeline, 3 integración smoke, 1 E2E Firefox smoke y 99.19 % de cobertura de `domain`/`services` |
+
+La cobertura `99.19 %` de #6 se limita a `domain` y `services`, tal como solicita el gate del
+Jenkinsfile; no es cobertura de la aplicación Flask completa, la API, HTML ni scripts. Build
+#6 confirma la corrección de infraestructura aplicada a la instancia temporal, pero no
+demuestra una instalación Jenkins limpia desde cero porque conservó su volumen histórico.
+
+Build #3 sigue siendo evidencia histórica de otra instancia temporal. No se debe mezclar con
+#4–#6 ni presentarlo como ejecución del checkout actual. Ninguno de estos builds demuestra el
+envío y la recepción de un correo SMTP real ni una secuencia intencional verde → roja → verde.
 
 ## Credenciales y notificaciones SMTP
 

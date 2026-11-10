@@ -1,8 +1,9 @@
 # Estado del proyecto y pendientes
 
-> **Estado actual:** `main` está en `299c7b3` y los defectos de eliminación HTML por nombre están
-> corregidos. Esta página conserva una revisión de ramas del 9 de noviembre como historial; no se
-> debe leer como evidencia de un Jenkins ejecutando el `HEAD` actual.
+> **Estado actual:** `main` está en `fdceef069d2a2c33894f0982d1dde38b90330e1f` y los defectos
+> de eliminación HTML por nombre están corregidos. Esta página conserva una revisión de ramas
+> del 9 de noviembre como historial; las ejecuciones Jenkins actuales se documentan con sus
+> límites en `EVIDENCIA.md`.
 
 Revisión histórica del 9 de noviembre de 2026, tras `git fetch origin`. Se compararon los archivos
 e historiales de las ramas remotas; esa revisión no modificó `main` ni abrió un PR.
@@ -35,12 +36,15 @@ su trabajo. La aplicación de negocio y el contrato API no cambian por las prueb
 
 ## Pendientes del cierre conjunto
 
-- Configurar el job/agente Jenkins y SMTP, ejecutar builds y acreditar correo recibido.
-- Completar las evidencias de Jenkins verde/rojo/verde, timeout y ambos ambientes.
+- La receta versionada de agente Jenkins (`infra/jenkins/`) todavía requiere un build limpio y
+  una validación operativa separada; los Builds #4, #5 y #6 pertenecen a la instancia temporal.
+- Configurar SMTP con credenciales autorizadas y acreditar recepción real del correo.
+- Completar la evidencia de Jenkins verde/rojo/verde intencional y timeout; no se afirma que ya
+  haya ocurrido.
 - Elegir el tag final y el commit integrado del equipo, y entregar archivo MIU con URL/tag/SHA.
 
-El código de infraestructura existe y fue comprobado por componentes localmente;
-eso no equivale a un build Jenkins ni a un correo recibido.
+La instancia temporal ejecutó los Builds #4, #5 y #6 sobre el SHA actual; eso no equivale a un
+build Jenkins limpio desde la receta versionada ni a un correo recibido.
 
 ## Actualización de auditoría PR #8
 
@@ -50,7 +54,8 @@ corrección por ID registró 72 unitarias, 71 de integración y 17 E2E por naveg
 Playwright disponibles identifican el checkout `46c4662`, anterior al commit actual `299c7b3`.
 La cobertura 99.12 % y las 22 pruebas de notificaciones corresponden a artefactos históricos, no a
 una medición nueva del `HEAD` actual.
-No se considera validado el aislamiento entre jobs: disableConcurrentBuilds sólo protege
-el mismo job; Compose y su cleanup comparten nombres y puertos. La solución compartida
-requiere aprobación. Jenkins real, SMTP recibido y la secuencia verde → roja → verde siguen
-pendientes de evidencia.
+La validación local histórica no acreditaba el aislamiento entre jobs: `disableConcurrentBuilds`
+sólo protege el mismo job y esa prueba no usaba todavía la receta Jenkins aislada. La nueva
+configuración declarativa usa un contenedor, puerto y volumen propios, pero su ejecución desde
+cero sigue pendiente de evidencia. Un Jenkins limpio desde cero, SMTP recibido y la secuencia
+verde → roja → verde siguen pendientes de evidencia.
