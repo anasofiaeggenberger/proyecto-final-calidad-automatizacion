@@ -8,19 +8,32 @@ pipeline {
             description: 'Ambiente donde se despliega y se prueba el artefacto.'
         )
         choice(
+            name: 'BROWSER',
+            choices: ['chromium', 'firefox'],
+            description: 'Navegador que ejecuta los recorridos E2E.'
+        )
+        choice(
             name: 'SUITE',
             choices: ['smoke', 'regression'],
             description: 'smoke ejecuta sólo los casos marcados; regression ejecuta la suite completa.'
         )
     }
 
+    triggers {
+        pollSCM('H/2 * * * *')
+    }
+
     options {
         skipDefaultCheckout(true)
         timestamps()
+        disableConcurrentBuilds()
+        skipStagesAfterUnstable()
         timeout(time: 30, unit: 'MINUTES')
     }
 
     environment {
+        FAILED_STAGE = 'Checkout'
+        E2E_REPORT_DIR = 'reports/e2e'
         PYTHON_BIN = '.venv/bin/python'
         UNIT_REPORT_DIR = 'reports/unit'
         COVERAGE_THRESHOLD = '90'
@@ -34,6 +47,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
+                script { env.FAILED_STAGE = 'Checkout' }
                 deleteDir()
                 checkout scm
             }
@@ -41,6 +55,7 @@ pipeline {
 
         stage('Setup Python') {
             steps {
+                script { env.FAILED_STAGE = 'Setup Python' }
                 sh '''
                     set -eu
                     command -v uv
@@ -48,14 +63,23 @@ pipeline {
                     uv venv --python 3.12 .venv
                     test -f requirements-ci.txt
                     uv pip sync --python "$PYTHON_BIN" requirements-ci.txt
+                    uv pip install --python "$PYTHON_BIN" --require-hashes -r requirements-e2e.txt
                     "$PYTHON_BIN" --version
                     "$PYTHON_BIN" -m pytest --version
                 '''
             }
         }
 
+        stage('Lint') {
+            steps {
+                script { env.FAILED_STAGE = 'Lint' }
+                sh '"$PYTHON_BIN" -m ruff check app.py api domain services tests scripts'
+            }
+        }
+
         stage('Unit Tests + Coverage') {
             steps {
+                script { env.FAILED_STAGE = 'Unit Tests + Coverage' }
                 sh '''
                     set -eu
                     mkdir -p "$UNIT_REPORT_DIR"
@@ -72,6 +96,7 @@ pipeline {
 
         stage('Build Artifact') {
             steps {
+                script { env.FAILED_STAGE = 'Build Artifact' }
                 script {
                     env.COMMIT_SHA = sh(
                         script: 'git rev-parse HEAD',
@@ -102,6 +127,7 @@ pipeline {
 
         stage('Deploy') {
             steps {
+                script { env.FAILED_STAGE = 'Deploy' }
                 // --no-build garantiza que se despliega la imagen ya construida, no una nueva
                 sh '''
                     set -eu
@@ -116,6 +142,7 @@ pipeline {
 
         stage('Health Gate') {
             steps {
+                script { env.FAILED_STAGE = 'Health Gate' }
                 // si la instancia no reporta el ambiente y el SHA desplegados, no se prueba nada más
                 sh '''
                     set -eu
@@ -139,6 +166,7 @@ pipeline {
 
         stage('Integration Tests') {
             steps {
+                script { env.FAILED_STAGE = 'Integration Tests' }
                 sh '''
                     set -eu
                     mkdir -p "$INTEGRATION_REPORT_DIR"
@@ -152,6 +180,26 @@ pipeline {
                     EXPECTED_VERSION="$COMMIT_SHA" \\
                     "$PYTHON_BIN" -m pytest tests/integration -v $MARCADORES \\
                         --junitxml="$INTEGRATION_REPORT_DIR/junit.xml"
+                '''
+            }
+        }
+
+        stage('E2E Tests') {
+            options {
+                timeout(time: 8, unit: 'MINUTES')
+            }
+            steps {
+                script { env.FAILED_STAGE = 'E2E Tests' }
+                sh '''
+                    set -eu
+                    "$PYTHON_BIN" -m playwright install --with-deps "$BROWSER"
+                    E2E_BASE_URL="http://127.0.0.1:$APP_PORT" \\
+                    E2E_ALLOW_CLEANUP=1 \\
+                    EXPECTED_AMBIENTE="$ENVIRONMENT" \\
+                    EXPECTED_VERSION="$COMMIT_SHA" \\
+                    "$PYTHON_BIN" scripts/ejecutar_e2e.py \\
+                        --suite "$SUITE" --browser "$BROWSER" \\
+                        --report-dir "$E2E_REPORT_DIR"
                 '''
             }
         }
@@ -172,8 +220,9 @@ pipeline {
                 def junitReport = 'reports/unit/junit.xml'
                 def coverageReport = 'reports/unit/coverage.xml'
                 def integrationReport = 'reports/integration/junit.xml'
+                def e2eReport = 'reports/e2e/junit.xml'
                 def buildReports = 'reports/build/*.txt'
-                def reports = [junitReport, coverageReport, integrationReport].findAll {
+                def reports = [junitReport, coverageReport, integrationReport, e2eReport].findAll {
                     fileExists(it)
                 }
 
@@ -187,6 +236,22 @@ pipeline {
                     junit testResults: integrationReport, allowEmptyResults: false
                 } else {
                     echo 'JUnit de integración no generado; se omite su publicación.'
+                }
+
+                if (fileExists(e2eReport)) {
+                    junit testResults: e2eReport, allowEmptyResults: false
+                }
+                archiveArtifacts(
+                    artifacts: 'reports/e2e/**',
+                    allowEmptyArchive: true,
+                    fingerprint: true
+                )
+                if (fileExists('reports/e2e/report.html')) {
+                    publishHTML(target: [
+                        reportDir: 'reports/e2e', reportFiles: 'report.html',
+                        reportName: 'E2E Playwright', keepAll: true,
+                        alwaysLinkToLastBuild: true, allowMissing: false
+                    ])
                 }
 
                 if (reports) {

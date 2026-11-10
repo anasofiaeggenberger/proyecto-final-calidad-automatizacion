@@ -1,5 +1,6 @@
-# Herramientas de navegador separadas del entorno de dominio.
+# Herramientas de calidad y navegador, compatibles con el gate unitario.
 -c requirements-ci.txt
 pytest-playwright>=0.7,<1.0
 playwright>=1.50,<2.0
 pytest-html>=4,<5
+ruff>=0.14,<1
