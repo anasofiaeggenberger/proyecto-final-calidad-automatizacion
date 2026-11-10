@@ -2,6 +2,11 @@ pipeline {
     agent any
 
     parameters {
+        string(
+            name: 'NOTIFY_EMAILS',
+            defaultValue: 'victorsaravia@ufm.edu',
+            description: 'Destinatarios autorizados del correo de fallo, separados por coma.'
+        )
         choice(
             name: 'ENVIRONMENT',
             choices: ['ci', 'staging'],
@@ -91,6 +96,13 @@ pipeline {
                         --cov-report=xml:"$UNIT_REPORT_DIR/coverage.xml" \\
                         --cov-fail-under="$COVERAGE_THRESHOLD"
                 '''
+            }
+        }
+
+        stage('Notification Tests') {
+            steps {
+                script { env.FAILED_STAGE = 'Notification Tests' }
+                sh '"$PYTHON_BIN" -m pytest tests/notifications -q --junitxml=reports/notifications/junit.xml'
             }
         }
 
@@ -206,6 +218,31 @@ pipeline {
     }
 
     post {
+        unsuccessful {
+            script {
+                // También se ejecuta ante timeout/abort. No oculta el fallo original.
+                try {
+                    withCredentials([
+                        file(credentialsId: 'smtp-config', variable: 'SMTP_CONFIG_FILE'),
+                        usernamePassword(credentialsId: 'smtp-auth',
+                            usernameVariable: 'SMTP_USERNAME', passwordVariable: 'SMTP_PASSWORD')
+                    ]) {
+                        sh '''
+                            set +x
+                            python3 scripts/notificar_fallo.py \\
+                                --to "$NOTIFY_EMAILS" --build "$BUILD_NUMBER" \\
+                                --commit "${COMMIT_SHA:-${GIT_COMMIT:-desconocido}}" \\
+                                --environment "$ENVIRONMENT" --stage "$FAILED_STAGE" \\
+                                --log-url "${BUILD_URL}console"
+                        '''
+                    }
+                } catch (error) {
+                    echo 'La notificación SMTP no pudo completarse; el build sigue fallido.'
+                } finally {
+                    archiveArtifacts artifacts: 'reports/notifications/**', allowEmptyArchive: true
+                }
+            }
+        }
         always {
             // los contenedores se apagan siempre, también ante fallo o timeout
             sh '''
@@ -220,9 +257,10 @@ pipeline {
                 def junitReport = 'reports/unit/junit.xml'
                 def coverageReport = 'reports/unit/coverage.xml'
                 def integrationReport = 'reports/integration/junit.xml'
+                def notificationReport = 'reports/notifications/junit.xml'
                 def e2eReport = 'reports/e2e/junit.xml'
                 def buildReports = 'reports/build/*.txt'
-                def reports = [junitReport, coverageReport, integrationReport, e2eReport].findAll {
+                def reports = [junitReport, coverageReport, integrationReport, e2eReport, notificationReport].findAll {
                     fileExists(it)
                 }
 
@@ -238,6 +276,9 @@ pipeline {
                     echo 'JUnit de integración no generado; se omite su publicación.'
                 }
 
+                if (fileExists(notificationReport)) {
+                    junit testResults: notificationReport, allowEmptyResults: false
+                }
                 if (fileExists(e2eReport)) {
                     junit testResults: e2eReport, allowEmptyResults: false
                 }
