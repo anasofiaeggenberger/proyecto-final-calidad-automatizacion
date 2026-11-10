@@ -1,0 +1,35 @@
+ENSAYO LOCAL: parche sin commit sobre fbe8565fedaba4e264d3de3f54112daffe9c6009
+
+diff --git a/api/routes.py b/api/routes.py
+index 02b0926..00984a4 100644
+--- a/api/routes.py
++++ b/api/routes.py
+@@ -90,7 +90,7 @@ def crear_paciente():
+     except PatientServiceError as error:
+         return _error("SOLICITUD_INVALIDA", str(error), 400)
+ 
+-    return jsonify({"paciente": _serializar(paciente), "posicion": _posicion(paciente)}), 201
++    return jsonify({"paciente": _serializar(paciente), "posicion": _posicion(paciente)}), 200
+ 
+ 
+ @api_bp.get("/pacientes")
+
+F..                                                                      [100%]
+=================================== FAILURES ===================================
+____________ test_alta_valida_devuelve_201_con_paciente_y_posicion _____________
+
+api = <api_client.ApiClient object at 0x10529ac90>
+
+    @pytest.mark.smoke
+    def test_alta_valida_devuelve_201_con_paciente_y_posicion(api):
+        respuesta = api.registrar("Ana López", 2)
+    
+>       assert respuesta.status == 201
+E       assert 200 == 201
+E        +  where 200 = <api_client.Respuesta object at 0x10532ef60>.status
+
+tests/integration/test_alta_pacientes.py:12: AssertionError
+- generated xml file: /Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/reports/demo/integration-red.xml -
+=========================== short test summary info ============================
+FAILED tests/integration/test_alta_pacientes.py::test_alta_valida_devuelve_201_con_paciente_y_posicion
+1 failed, 2 passed, 68 deselected in 0.26s

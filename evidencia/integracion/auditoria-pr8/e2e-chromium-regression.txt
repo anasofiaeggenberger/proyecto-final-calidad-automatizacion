@@ -1,0 +1,36 @@
+{
+  "suite": "regression",
+  "browser": "chromium",
+  "commit": "09ccc08f6a84f0ed8ee6a08ee5bbd7b1f7eb059d",
+  "url": "servidor HTTP local en puerto din\u00e1mico"
+}
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-8.4.2, pluggy-1.7.0 -- $REPO/.venv/bin/python
+cachedir: .pytest_cache
+metadata: {'Python': '3.12.13', 'Platform': 'macOS-15.7.4-arm64-arm-64bit', 'Packages': {'pytest': '8.4.2', 'pluggy': '1.7.0'}, 'Plugins': {'metadata': '3.1.1', 'cov': '6.3.0', 'html': '4.2.0', 'playwright': '0.10.0'}}
+rootdir: $REPO
+configfile: pytest.ini
+plugins: metadata-3.1.1, cov-6.3.0, html-4.2.0, playwright-0.10.0
+collecting ... collected 17 items
+
+tests/e2e/test_deletion_and_empty_state.py::test_eliminar_reordena_hasta_cola_vacia[chromium] PASSED [  5%]
+tests/e2e/test_deletion_and_empty_state.py::test_cancelar_eliminacion_conserva_la_cola[chromium] PASSED [ 11%]
+tests/e2e/test_deletion_and_empty_state.py::test_atender_una_cola_inicialmente_vacia[chromium] PASSED [ 17%]
+tests/e2e/test_form_validation.py::test_limites_validos_de_urgencia[chromium-minima] PASSED [ 23%]
+tests/e2e/test_form_validation.py::test_limites_validos_de_urgencia[chromium-maxima] PASSED [ 29%]
+tests/e2e/test_form_validation.py::test_servidor_rechaza_urgencia_fuera_de_rango[chromium-debajo] PASSED [ 35%]
+tests/e2e/test_form_validation.py::test_servidor_rechaza_urgencia_fuera_de_rango[chromium-encima] PASSED [ 41%]
+tests/e2e/test_form_validation.py::test_nombre_vacio_es_obligatorio_en_el_navegador[chromium] PASSED [ 47%]
+tests/e2e/test_form_validation.py::test_nombre_de_espacios_es_rechazado_por_el_servidor[chromium] PASSED [ 52%]
+tests/e2e/test_form_validation.py::test_prioridad_sin_seleccionar_es_obligatoria[chromium] PASSED [ 58%]
+tests/e2e/test_form_validation.py::test_nombre_se_normaliza_sin_perder_tildes[chromium] PASSED [ 64%]
+tests/e2e/test_form_validation.py::test_nombres_duplicados_conservan_ambos_registros[chromium] PASSED [ 70%]
+tests/e2e/test_priority_fifo_attention.py::test_menor_prioridad_y_empates_fifo[chromium] PASSED [ 76%]
+tests/e2e/test_priority_fifo_attention.py::test_todos_los_niveles_se_ordenan_por_urgencia[chromium] PASSED [ 82%]
+tests/e2e/test_responsive_dashboard.py::test_dashboard_responsive_permite_completar_atencion[chromium-movil] PASSED [ 88%]
+tests/e2e/test_responsive_dashboard.py::test_dashboard_responsive_permite_completar_atencion[chromium-tablet] PASSED [ 94%]
+tests/e2e/test_smoke_registration.py::test_registro_y_listado_persisten_al_recargar[chromium] PASSED [100%]
+
+- generated xml file: $REPO/reports/audit/e2e-chromium-regression/junit.xml -
+- Generated html report: file:///Users/victorsaravia/Desktop/6Semestre/Calidad%20y%20Automatizacio%CC%81n%20en%20Ingenieri%CC%81a%20Software/proyecto-final-calidad-automatizacion/reports/audit/e2e-chromium-regression/report.html -
+============================= 17 passed in 29.87s ==============================

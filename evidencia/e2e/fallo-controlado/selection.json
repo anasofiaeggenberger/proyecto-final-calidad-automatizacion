@@ -1,0 +1,6 @@
+{
+  "suite": "smoke",
+  "browser": "chromium",
+  "commit": "fbe8565fedaba4e264d3de3f54112daffe9c6009",
+  "url": "servidor HTTP local en puerto din\u00e1mico"
+}

@@ -1,0 +1,213 @@
+ENSAYO LOCAL: parche sin commit sobre fbe8565fedaba4e264d3de3f54112daffe9c6009
+
+diff --git a/domain/patient.py b/domain/patient.py
+index 544334d..3db2625 100644
+--- a/domain/patient.py
++++ b/domain/patient.py
+@@ -36,7 +36,7 @@ class Patient:
+     def sort_key(self) -> tuple[int, int]:
+         """Clave de atención: mayor urgencia primero y FIFO en empate."""
+ 
+-        return self.prioridad, self.orden_llegada
++        return -self.prioridad, self.orden_llegada
+ 
+     def __lt__(self, other: Any) -> bool:
+         if not isinstance(other, Patient):
+
+FF..............F.F...FF.F...........................F...F.              [100%]
+=================================== FAILURES ===================================
+___________ test_patient_exposes_immutable_domain_data_and_sort_key ____________
+
+    def test_patient_exposes_immutable_domain_data_and_sort_key() -> None:
+        patient = Patient(
+            id="p-0001",
+            nombre="Ana López",
+            prioridad=2,
+            orden_llegada=4,
+        )
+    
+        assert patient.id == "p-0001"
+        assert patient.nombre == "Ana López"
+        assert patient.prioridad == 2
+        assert patient.orden_llegada == 4
+>       assert patient.sort_key == (2, 4)
+E       assert (-2, 4) == (2, 4)
+E         
+E         At index 0 diff: -2 != 2
+E         Use -v to get more diff
+
+tests/unit/test_patient.py:18: AssertionError
+____________ test_patient_ordering_uses_priority_then_arrival_order ____________
+
+    def test_patient_ordering_uses_priority_then_arrival_order() -> None:
+        later = Patient("p-0002", "B", prioridad=2, orden_llegada=1)
+        earlier = Patient("p-0001", "A", prioridad=2, orden_llegada=0)
+        more_urgent = Patient("p-0003", "C", prioridad=1, orden_llegada=9)
+    
+        assert earlier < later
+>       assert sorted([later, more_urgent, earlier]) == [more_urgent, earlier, later]
+E       AssertionError: assert [Patient(id='...en_llegada=9)] == [Patient(id='...en_llegada=1)]
+E         
+E         At index 0 diff: Patient(id='p-0001', nombre='A', prioridad=2, orden_llegada=0) != Patient(id='p-0003', nombre='C', prioridad=1, orden_llegada=9)
+E         Use -v to get more diff
+
+tests/unit/test_patient.py:30: AssertionError
+__________________ test_U06_queue_orders_distinct_priorities ___________________
+
+patient_queue = <domain.patient_queue.PatientQueue object at 0x106e90c50>
+
+    def test_U06_queue_orders_distinct_priorities(patient_queue: PatientQueue) -> None:
+        for priority in [5, 1, 3, 2, 4]:
+            patient_queue.enqueue(f"P{priority}", priority)
+    
+>       assert [patient.prioridad for patient in patient_queue.list_ordered()] == [
+            1,
+            2,
+            3,
+            4,
+            5,
+        ]
+E       assert [5, 4, 3, 2, 1] == [1, 2, 3, 4, 5]
+E         
+E         At index 0 diff: 5 != 1
+E         Use -v to get more diff
+
+tests/unit/test_patient_queue.py:15: AssertionError
+__________ test_U08_queue_preserves_fifo_with_interleaved_priorities ___________
+
+patient_queue = <domain.patient_queue.PatientQueue object at 0x106dd8e00>
+
+    def test_U08_queue_preserves_fifo_with_interleaved_priorities(
+        patient_queue: PatientQueue,
+    ) -> None:
+        for name, priority in [("A", 2), ("B", 1), ("C", 2), ("D", 1)]:
+            patient_queue.enqueue(name, priority)
+    
+        attended = [patient_queue.attend_next() for _ in range(4)]
+    
+>       assert patient_names(attended) == ["B", "D", "A", "C"]
+E       AssertionError: assert ['A', 'C', 'B', 'D'] == ['B', 'D', 'A', 'C']
+E         
+E         At index 0 diff: 'A' != 'B'
+E         Use -v to get more diff
+
+tests/unit/test_patient_queue.py:48: AssertionError
+______ test_U11_attending_until_empty_returns_expected_patients_then_none ______
+
+patient_queue = <domain.patient_queue.PatientQueue object at 0x106e912e0>
+
+    def test_U11_attending_until_empty_returns_expected_patients_then_none(
+        patient_queue: PatientQueue,
+    ) -> None:
+        for name, priority in [("A", 3), ("B", 1), ("C", 2)]:
+            patient_queue.enqueue(name, priority)
+    
+>       assert patient_names(
+            [patient_queue.attend_next() for _ in range(3)]
+        ) == ["B", "C", "A"]
+E       AssertionError: assert ['A', 'C', 'B'] == ['B', 'C', 'A']
+E         
+E         At index 0 diff: 'A' != 'B'
+E         Use -v to get more diff
+
+tests/unit/test_patient_queue.py:86: AssertionError
+______________ test_U12_remove_existing_id_keeps_heap_order_valid ______________
+
+patient_queue = <domain.patient_queue.PatientQueue object at 0x106e91c40>
+
+    def test_U12_remove_existing_id_keeps_heap_order_valid(
+        patient_queue: PatientQueue,
+    ) -> None:
+        first = patient_queue.enqueue("A", 1)
+        middle = patient_queue.enqueue("B", 2)
+        last = patient_queue.enqueue("C", 3)
+    
+        assert patient_queue.remove_by_id(middle.id) == middle
+>       assert [patient.id for patient in patient_queue.list_ordered()] == [
+            first.id,
+            last.id,
+        ]
+E       AssertionError: assert ['p-0003', 'p-0001'] == ['p-0001', 'p-0003']
+E         
+E         At index 0 diff: 'p-0003' != 'p-0001'
+E         Use -v to get more diff
+
+tests/unit/test_patient_queue.py:101: AssertionError
+________________ test_list_ordered_does_not_modify_queue_state _________________
+
+patient_queue = <domain.patient_queue.PatientQueue object at 0x106e923f0>
+
+    def test_list_ordered_does_not_modify_queue_state(
+        patient_queue: PatientQueue,
+    ) -> None:
+        patient_queue.enqueue("A", 3)
+        patient_queue.enqueue("B", 1)
+        patient_queue.enqueue("C", 2)
+        before_next = patient_queue.peek()
+        before_length = len(patient_queue)
+    
+        ordered = patient_queue.list_ordered()
+    
+>       assert patient_names(ordered) == ["B", "C", "A"]
+E       AssertionError: assert ['A', 'C', 'B'] == ['B', 'C', 'A']
+E         
+E         At index 0 diff: 'A' != 'B'
+E         Use -v to get more diff
+
+tests/unit/test_patient_queue.py:135: AssertionError
+_________________ test_U12_service_can_attend_and_remove_by_id _________________
+
+patient_service = <services.patient_service.PatientService object at 0x106f20080>
+
+    def test_U12_service_can_attend_and_remove_by_id(patient_service) -> None:
+        first = patient_service.registrar("A", 2)
+        second = patient_service.registrar("B", 1)
+    
+>       assert patient_service.proximo() == second
+E       AssertionError: assert Patient(id='p...den_llegada=0) == Patient(id='p...den_llegada=1)
+E         
+E         Differing attributes:
+E         ['id', 'nombre', 'prioridad', 'orden_llegada']
+E         
+E         Drill down into differing attribute id:
+E           id: 'p-0001' != 'p-0002'
+E           - p-0002...
+E         
+E         ...Full output truncated (14 lines hidden), use '-vv' to show
+
+tests/unit/test_patient_service.py:132: AssertionError
+____________ test_U19_remove_then_register_preserves_state_and_fifo ____________
+
+patient_service = <services.patient_service.PatientService object at 0x106f211f0>
+
+    def test_U19_remove_then_register_preserves_state_and_fifo(patient_service) -> None:
+        removed = patient_service.registrar("Se retira", 2)
+        urgent = patient_service.registrar("Urgente", 1)
+        patient_service.eliminar_por_id(removed.id)
+    
+        re_registered = patient_service.registrar("Nuevo", 2)
+    
+        assert re_registered.id == "p-0003"
+        assert re_registered.orden_llegada == 2
+>       assert [patient.nombre for patient in patient_service.listar()] == [
+            "Urgente",
+            "Nuevo",
+        ]
+E       AssertionError: assert ['Nuevo', 'Urgente'] == ['Urgente', 'Nuevo']
+E         
+E         At index 0 diff: 'Nuevo' != 'Urgente'
+E         Use -v to get more diff
+
+tests/unit/test_patient_service.py:178: AssertionError
+- generated xml file: /Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/reports/demo/unit-red.xml -
+=========================== short test summary info ============================
+FAILED tests/unit/test_patient.py::test_patient_exposes_immutable_domain_data_and_sort_key
+FAILED tests/unit/test_patient.py::test_patient_ordering_uses_priority_then_arrival_order
+FAILED tests/unit/test_patient_queue.py::test_U06_queue_orders_distinct_priorities
+FAILED tests/unit/test_patient_queue.py::test_U08_queue_preserves_fifo_with_interleaved_priorities
+FAILED tests/unit/test_patient_queue.py::test_U11_attending_until_empty_returns_expected_patients_then_none
+FAILED tests/unit/test_patient_queue.py::test_U12_remove_existing_id_keeps_heap_order_valid
+FAILED tests/unit/test_patient_queue.py::test_list_ordered_does_not_modify_queue_state
+FAILED tests/unit/test_patient_service.py::test_U12_service_can_attend_and_remove_by_id
+FAILED tests/unit/test_patient_service.py::test_U19_remove_then_register_preserves_state_and_fifo
+9 failed, 50 passed in 0.06s

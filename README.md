@@ -1,5 +1,9 @@
 # Cola hospitalaria
 
+> **Estado actualizado:** concurrencia y aislamiento entre builds corregidos y probados.
+> Ver [cierre de correcciones](docs/CIERRE_CORRECCIONES.md). Los estados anteriores se conservan como historial;
+> quedan únicamente las comprobaciones externas de Jenkins/SMTP y la entrega del equipo.
+
 Dashboard Flask para gestionar la atención de pacientes mediante una cola de prioridad. La interfaz principal permite registrar, listar, atender y eliminar pacientes, mostrando primero los niveles de urgencia más altos y respetando el orden de llegada cuando existe empate.
 
 ## Funcionalidades actuales
@@ -10,7 +14,7 @@ Dashboard Flask para gestionar la atención de pacientes mediante una cola de pr
 - Atención del siguiente paciente.
 - Eliminación individual de pacientes.
 - Mensajes visibles para operaciones exitosas, validaciones y cola vacía.
-- Diseño responsive con HTML semántico y selectores `data-testid` preparados para futuras pruebas Playwright.
+- Diseño responsive con HTML semántico y selectores `data-testid` usados por la suite Playwright.
 
 La interfaz antigua “Sin Estructura” y sus rutas ya no forman parte de la aplicación web.
 
@@ -137,6 +141,58 @@ python scripts/verificar_health.py --url http://127.0.0.1:8001/api/health \
     --ambiente ci --version "$APP_VERSION"
 ```
 
+## E2E con Playwright
+
+```bash
+uv pip install --python .venv/bin/python --require-hashes -r requirements-ci.txt -r requirements-e2e.txt
+.venv/bin/python -m playwright install chromium firefox
+.venv/bin/python scripts/ejecutar_e2e.py
+```
+
+El último comando levanta una instancia HTTP local, ejecuta 17 casos en Chromium y deja
+JUnit y HTML en reports/e2e/. Para smoke o Firefox:
+
+```bash
+.venv/bin/python scripts/ejecutar_e2e.py --suite smoke --browser firefox
+```
+
+Para probar el contenedor ya desplegado, usar una instancia exclusiva de pruebas: cada caso
+vacía su cola por HTTP antes y después.
+
+```bash
+E2E_ALLOW_CLEANUP=1 EXPECTED_AMBIENTE=ci EXPECTED_VERSION="$APP_VERSION" \\
+    .venv/bin/python scripts/ejecutar_e2e.py --base-url http://127.0.0.1:8001
+.venv/bin/python -m pytest tests/notifications -q
+.venv/bin/python -m ruff check app.py api domain services tests scripts
+```
+
+Los fallos conservan screenshot y trace.zip dentro de reports/e2e/artifacts/.
+Abrir el reporte HTML en el navegador o inspeccionar una traza con
+`.venv/bin/python -m playwright show-trace <ruta-a-trace.zip>`.
+El reporte HTML usa pytest-html; no es el reporter HTML de Playwright para Node.
+
+## Jenkins y documentación
+
+El Jenkinsfile ejecuta checkout → setup → lint → unitarias/cobertura → pruebas de correo →
+build único → deploy → health → integración → E2E. Un error impide las siguientes etapas y
+conserva reportes; el bloque final intenta enviar correo de fallo/timeout y apaga Compose.
+
+| Parámetro | Valores | Efecto |
+|---|---|---|
+| ENVIRONMENT | ci, staging | Instancia/puerto/ambiente expuesto por health |
+| SUITE | regression (default), smoke | Cambia la selección de integración y E2E |
+| BROWSER | chromium, firefox | Cambia el motor E2E |
+| NOTIFY_EMAILS | Correo de Git predeterminado, editable | Destinatarios del fallo |
+
+- [Instalación Jenkins y SMTP](docs/JENKINS.md)
+- [Matriz y operación E2E](docs/E2E.md)
+- [Guion de demo](docs/DEMO.md)
+- [Revisión de ramas y pendientes](docs/ESTADO_PROYECTO.md)
+
+Los requirements*.txt son manifiestos de instalación. Las salidas de comandos que se
+conservan como evidencia están en evidencia/integracion/; los reportes temporales están
+ignorados en reports/. No hay archivos de salida de comandos en la raíz.
+
 ## Procedencia y licencia
 
 El código base fue migrado de forma conservadora desde [anasofiaeggenberger/Proyecto-Priority-Queue](https://github.com/anasofiaeggenberger/Proyecto-Priority-Queue), commit `89fa05b` de `main`. Se conservaron los autores y avisos presentes en el README original.
@@ -147,15 +203,31 @@ El repositorio original no contiene `LICENSE`, `LICENSE.md`, `COPYING` ni `NOTIC
 
 El dashboard, el dominio aislado, las unitarias con gate de cobertura, la API JSON, las pruebas de
 integración de caja negra, el artefacto Docker y los ambientes `ci`/`staging` ya están implementados.
-Quedan pendientes la suite E2E con Playwright, las notificaciones SMTP y el job de Jenkins.
+La suite E2E y el código de notificaciones SMTP están implementados. Falta ejecutar el job de
+Jenkins con sus credenciales SMTP y guardar evidencia de correo recibido.
 
 ## Estrategia técnica y colaboración
 
-La estrategia futura de pruebas y automatización está documentada en:
+La planificación original y las decisiones implementadas están documentadas en:
 
-- [Plan técnico](docs/PLAN_TECNICO.md): arquitectura propuesta, contrato API provisional, matrices de pruebas, aislamiento, Jenkins, ambientes y riesgos.
+- [Plan técnico](docs/PLAN_TECNICO.md): arquitectura propuesta, contrato API aprobado, matrices de pruebas, aislamiento, Jenkins, ambientes y riesgos.
 - [Guía operativa para agentes](docs/GUIA_AGENTES_PROYECTO_FINAL.md): responsabilidades, dependencias, ramas, evidencias y reglas de integración.
 - [Decisiones técnicas](DECISIONES.md): alternativas evaluadas, decisiones cerradas y fuentes.
 - [Evidencia de ejecución](EVIDENCIA.md): resultados verificados y lo que sigue pendiente.
 
 Las secciones de esos planes marcadas como planificadas siguen siendo trabajo futuro; `EVIDENCIA.md` indica qué está verificado y qué no. Para colaborar, cada integrante debe trabajar en una rama propia, mantener su alcance, ejecutar las verificaciones de su cambio y abrir un PR con evidencia. Ana Sofía es responsable de lógica/unitarias/cobertura/gate de calidad; Juan Pablo de API/integración/Docker/ambientes/gate de integración; y Víctor de Playwright/POM/gate E2E/notificaciones/demo. No se deben hacer commits, pushes ni merges a nombre de otra persona ni guardar secretos en el repositorio.
+
+## Auditoría del PR #8
+
+Ver [informe final](docs/AUDITORIA_PR8.md): SMTP corregido, 22 pruebas de notificaciones y
+188 ejecuciones aprobadas. Persisten concurrencia heredada y aislamiento entre jobs por
+resolver con los responsables. Jenkins real y recepción SMTP siguen pendientes.
+
+## Actualización de auditoría PR #8
+
+Ver [informe de auditoría](docs/AUDITORIA_PR8.md).
+La evidencia anterior conserva sus SHAs y conteos históricos. La auditoría actual registra
+22 pruebas SMTP, cobertura 99.12 % y smoke/regression en ambos navegadores.
+No se considera validado el aislamiento entre jobs: disableConcurrentBuilds sólo protege
+el mismo job; Compose y su cleanup comparten nombres y puertos. La solución compartida
+requiere aprobación. Dominio concurrente, Jenkins real y SMTP recibido siguen pendientes.

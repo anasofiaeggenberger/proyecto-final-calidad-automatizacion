@@ -1,10 +1,14 @@
 # Decisiones técnicas
 
+> **Estado actualizado:** concurrencia y aislamiento entre builds corregidos y probados.
+> Ver [cierre de correcciones](docs/CIERRE_CORRECCIONES.md). Los estados anteriores se conservan como historial;
+> quedan únicamente las comprobaciones externas de Jenkins/SMTP y la entrega del equipo.
+
 Documento compartido del equipo. Cada integrante mantiene su propia sección.
 
 - Ana Sofía: dominio, pruebas unitarias, cobertura y gate de calidad. *(pendiente)*
 - Juan Pablo: API REST, integración, Docker, ambientes y gate de integración.
-- Víctor: Playwright/POM, gate E2E, notificaciones SMTP y demo. *(pendiente)*
+- Víctor: Playwright/POM, gate E2E, notificaciones SMTP y demo implementados; validación operativa pendiente.
 
 ---
 
@@ -127,3 +131,92 @@ que nadie pueda eludir el gate de Ana al lanzar un build.
 3. J. Humble y D. Farley, *Continuous Delivery: Reliable Software Releases through Build, Test, and Deployment Automation*. Boston, MA, USA: Addison-Wesley, 2010.
 4. R. Fielding, M. Nottingham y J. Reschke, "HTTP Semantics," RFC 9110, IETF, jun. 2022. [En línea]. Disponible: https://www.rfc-editor.org/rfc/rfc9110
 5. R. T. Fielding, "Architectural Styles and the Design of Network-based Software Architectures," tesis doctoral, Univ. of California, Irvine, CA, USA, 2000.
+
+## Víctor — Playwright, gate E2E, SMTP y demo
+
+### Pruebas de interfaz y técnicas
+
+Se implementaron 17 casos independientes en Python con Playwright/pytest: uno smoke y el resto
+de regresión. Cubren registro, recarga, prioridad 1–5, FIFO, atención, eliminación confirmada o
+cancelada, vacío, límites 0/1/5/6, validación nativa y del servidor, nombres duplicados y móvil/tablet.
+La [matriz E2E](docs/E2E.md) enlaza caso, técnica y resultado esperado.
+
+Se tomó como referencia la práctica local practica-e2e-playwright: selectores en POM, casos
+ISTQB y trazas/capturas al fallar. Se eligió Python frente a TypeScript para respetar el acuerdo
+del equipo y reutilizar pytest/JUnit sin incorporar Node al agente.
+
+El estado se prepara y limpia por HTTP mediante QueueState; el recorrido de negocio siempre
+se realiza en el navegador. Cada prueba usa un contexto nuevo. En CI es obligatorio apuntar a
+la instancia desplegada; no hay fallback local silencioso. El servidor HTTP en puerto dinámico
+se reserva al desarrollo. La cola compartida exige ejecución serial y un ambiente exclusivo.
+
+### Dos principios SOLID con implementación y consumidores
+
+| Principio | Clases y consumidor concreto | Problema que evita |
+|---|---|---|
+| SRP | PatientForm concentra el formulario; PatientQueueView concentra tabla/resumen/acciones; HospitalDashboardPage los compone | Un cambio de formulario no obliga a modificar selectores de la cola ni duplicarlos en cada test |
+| ISP | QueueReader y QueueActions son Protocols separados en contracts.py; la fixture queue entrega QueueReader a registro/validación y queue_actions entrega QueueActions a atención/eliminación | Las pruebas que sólo consultan no dependen de una interfaz que también obliga a implementar acciones destructivas |
+
+PatientQueueView satisface ambas interfaces estructuralmente. La separación se encuentra en
+código y en fixtures/consumidores, y no se justifica por mera inyección de constructor.
+
+### Gate, parámetros y artefactos
+
+Se conserva el gate de 90 % de Ana y las etapas de artefacto/ambientes/integración de Juan.
+Lint revisa errores de sintaxis y nombres con Ruff antes de unitarias. Las herramientas E2E
+tienen un lock separado con hashes, restringido por requirements-ci.txt para no cambiar el
+entorno de dominio. El pipeline añade pruebas del correo antes del build y E2E después de
+integración. El código de salida de pytest llega a Jenkins sin una tubería que lo oculte.
+
+ENVIRONMENT selecciona ci/staging; SUITE smoke/regression cambia integración y E2E; BROWSER
+chromium/firefox cambia el navegador y queda registrado en selection.json. NOTIFY_EMAILS
+cambia destinatarios. JUnit, HTML, selección, health, trazas y capturas se archivan incluso al
+fallar. Se evita concurrencia del mismo job por el estado y los nombres fijos de Compose.
+
+### Correo y demo
+
+Se eligió smtplib de la biblioteca estándar frente a Email Extension para que host, puerto,
+TLS, usuario y contraseña se inyecten explícitamente por Credentials Binding desde el
+Jenkinsfile. SMTP_CONFIG_FILE contiene servidor/puerto/remitente; smtp-auth aporta usuario y
+contraseña. Sólo se permiten STARTTLS o TLS directo con validación de certificado.
+No se publican secretos ni respuestas SMTP en logs.
+
+El correo contiene build, SHA, ambiente, etapa fallida y enlace al log. unsuccessful cubre
+fallo y aborto/timeout; si SMTP falla se conserva el resultado fallido original. Las pruebas
+verifican formato, rechazo de cabeceras y TLS sin enviar mensajes reales. Un servidor que
+acepta el mensaje no demuestra recepción en el buzón: esa evidencia sigue pendiente.
+
+Los tres parches de demo modifican código de aplicación, no pruebas, y el asistente sólo los
+aplica en ramas demo/. Se verifican en un worktree temporal y se revierten sin git reset.
+El [guion](docs/DEMO.md) distingue los ensayos locales de los builds reales aún pendientes.
+
+### Sugerencias de IA
+
+| Sugerencia | Decisión | Motivo |
+|---|---|---|
+| Reutilizar TypeScript exactamente como en la práctica | Rechazada | El equipo acordó Python y pytest; se reutiliza el diseño, no otro stack |
+| Separar lectura y acciones con Protocols | Aceptada | Permite demostrar ISP con contratos y consumidores reales |
+| Añadir endpoint de reset para limpiar E2E | Rechazada | Cambiaría la API de Juan; la limpieza usa GET/DELETE existentes |
+| Dar por probado SMTP con mocks | Rechazada | Los mocks prueban el código, no la entrega de correo; se deja el buzón pendiente |
+
+### Fuentes complementarias
+
+[6] Microsoft, “Page object models” y “Pytest Plugin Reference,” Playwright for Python.
+[En línea]. Disponibles: https://playwright.dev/python/docs/pom y
+https://playwright.dev/python/docs/test-runners. Consulta: 9 nov. 2026.
+
+[7] Jenkins Project, “Pipeline Syntax” y “Credentials Binding Plugin.”
+[En línea]. Disponibles: https://www.jenkins.io/doc/book/pipeline/syntax/ y
+https://www.jenkins.io/doc/pipeline/steps/credentials-binding/. Consulta: 9 nov. 2026.
+
+[8] Python Software Foundation, “smtplib — SMTP protocol client,” Python 3.12.
+[En línea]. Disponible: https://docs.python.org/3.12/library/smtplib.html. Consulta: 9 nov. 2026.
+
+## Actualización de auditoría PR #8
+
+Ver [informe de auditoría](docs/AUDITORIA_PR8.md).
+La evidencia anterior conserva sus SHAs y conteos históricos. La auditoría actual registra
+22 pruebas SMTP, cobertura 99.12 % y smoke/regression en ambos navegadores.
+No se considera validado el aislamiento entre jobs: disableConcurrentBuilds sólo protege
+el mismo job; Compose y su cleanup comparten nombres y puertos. La solución compartida
+requiere aprobación. Dominio concurrente, Jenkins real y SMTP recibido siguen pendientes.

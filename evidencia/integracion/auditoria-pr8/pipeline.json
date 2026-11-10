@@ -1,0 +1,6 @@
+{
+  "shell_blocks_validos": 20,
+  "health_gate_operativo_identico_a_main": true,
+  "nota": "Se excluye \u00fanicamente el registro env.FAILED_STAGE que ya exist\u00eda en PR8",
+  "groovy_validado": false
+}

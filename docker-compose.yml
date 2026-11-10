@@ -7,6 +7,8 @@ x-api-base: &api-base
     args:
       APP_VERSION: ${APP_VERSION:-dev}
   restart: "no"
+  labels:
+    org.hospital.build-token: ${BUILD_TOKEN:-manual}
   healthcheck:
     test:
       - CMD
@@ -23,21 +25,25 @@ services:
   api-ci:
     <<: *api-base
     profiles: ["ci"]
-    container_name: hospital-api-ci
     environment:
       APP_AMBIENTE: ci
       APP_VERSION: ${APP_VERSION:-dev}
       PORT: 8000
     ports:
-      - "${CI_PORT:-8001}:8000"
+      - "127.0.0.1:${CI_PORT:-8001}:8000"
 
   api-staging:
     <<: *api-base
     profiles: ["staging"]
-    container_name: hospital-api-staging
     environment:
       APP_AMBIENTE: staging
       APP_VERSION: ${APP_VERSION:-dev}
       PORT: 8000
     ports:
-      - "${STAGING_PORT:-8002}:8000"
+      - "127.0.0.1:${STAGING_PORT:-8002}:8000"
+
+# Compose asigna una red propia al proyecto de cada build.
+networks:
+  default:
+    labels:
+      org.hospital.build-token: ${BUILD_TOKEN:-manual}

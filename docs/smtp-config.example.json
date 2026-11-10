@@ -1,0 +1,6 @@
+{
+  "host": "smtp.example.invalid",
+  "port": 587,
+  "tls": "starttls",
+  "sender": "correo-autorizado@example.invalid"
+}

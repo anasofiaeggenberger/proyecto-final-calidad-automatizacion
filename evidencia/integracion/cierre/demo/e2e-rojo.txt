@@ -1,0 +1,92 @@
+ENSAYO LOCAL: parche sin commit sobre fbe8565fedaba4e264d3de3f54112daffe9c6009
+
+diff --git a/templates/index.html b/templates/index.html
+index 049867b..505a839 100644
+--- a/templates/index.html
++++ b/templates/index.html
+@@ -136,7 +136,7 @@
+                                 <span id="priority-help" class="field-help">1 requiere atención inmediata; 5 es la menor urgencia.</span>
+                             </div>
+ 
+-                            <button type="submit" class="button button--primary" data-testid="register-patient-button">
++                            <button type="submit" class="button button--primary" data-testid="register-patient-action">
+                                 Registrar paciente
+                                 <span class="button-arrow" aria-hidden="true">→</span>
+                             </button>
+
+{
+  "suite": "smoke",
+  "browser": "chromium",
+  "commit": "fbe8565fedaba4e264d3de3f54112daffe9c6009",
+  "url": "servidor HTTP local en puerto din\u00e1mico"
+}
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-8.4.2, pluggy-1.7.0 -- /Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/.venv/bin/python
+cachedir: .pytest_cache
+metadata: {'Python': '3.12.13', 'Platform': 'macOS-15.7.4-arm64-arm-64bit', 'Packages': {'pytest': '8.4.2', 'pluggy': '1.7.0'}, 'Plugins': {'metadata': '3.1.1', 'cov': '6.3.0', 'html': '4.2.0', 'playwright': '0.10.0'}}
+rootdir: /private/tmp/hospital-demo-check
+configfile: pytest.ini
+plugins: metadata-3.1.1, cov-6.3.0, html-4.2.0, playwright-0.10.0
+collecting ... collected 17 items / 16 deselected / 1 selected
+
+tests/e2e/test_smoke_registration.py::test_registro_y_listado_persisten_al_recargar[chromium] FAILED [100%]
+
+=================================== FAILURES ===================================
+___________ test_registro_y_listado_persisten_al_recargar[chromium] ____________
+
+dashboard = <pages.hospital_dashboard_page.HospitalDashboardPage object at 0x107881850>
+queue = <pages.patient_queue_view.PatientQueueView object at 0x107882870>
+patient_name = 'Paciente registro y listado persisten al recargar'
+
+    def test_registro_y_listado_persisten_al_recargar(dashboard, queue, patient_name):
+        queue.expect_empty()
+>       dashboard.form.register(patient_name, 3)
+
+tests/e2e/test_smoke_registration.py:10: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/e2e/pages/patient_form.py:17: in register
+    self.submit_button.click()
+/Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:11045: in click
+    self._sync(
+/Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/.venv/lib/python3.12/site-packages/playwright/_impl/locator.py:222: in click
+    return await self._frame.click(
+/Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/.venv/lib/python3.12/site-packages/playwright/_impl/frame.py:587: in click
+    return await self._channel.click(
+/Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/.venv/lib/python3.12/site-packages/playwright/_impl/channel_owner.py:387: in finish
+    raise e from None
+/Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/.venv/lib/python3.12/site-packages/playwright/_impl/channel_owner.py:352: in finish
+    result = await zone.run_async(lambda: awaitable)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <playwright._impl.utils.zones.Zone object at 0x10796b3e0>
+func = <function ChannelOwner._wrap_api_call.<locals>.finish.<locals>.<lambda> at 0x107946de0>
+
+    async def run_async(self, func: Callable[[], Awaitable[R]]) -> R:
+        # Python: run() of an async function. The coroutine runs when it is awaited,
+        # so the zone must be current while it is awaited, not while it is created.
+        token = _async_local_storage.set(self)
+        try:
+>           return await func()
+                   ^^^^^^^^^^^^
+E           playwright._impl._errors.TimeoutError: Locator.click: Timeout 10000ms exceeded.
+E           Call log:
+E             - waiting for get_by_test_id("register-patient-button")
+
+/Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/.venv/lib/python3.12/site-packages/playwright/_impl/utils/zones.py:58: TimeoutError
+---------------------------- Captured stdout setup -----------------------------
+Instancia E2E: http://127.0.0.1:54686; health={'ambiente': 'e2e-local', 'estado': 'ok', 'version': 'e2e-local'}
+------------------------------ Captured log setup ------------------------------
+INFO     werkzeug:_internal.py:187 127.0.0.1 - - [09/Nov/2026 19:30:45] "GET /api/health HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:187 127.0.0.1 - - [09/Nov/2026 19:30:46] "GET /api/pacientes HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:187 127.0.0.1 - - [09/Nov/2026 19:30:46] "GET /api/pacientes HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:187 127.0.0.1 - - [09/Nov/2026 19:30:46] "GET / HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:187 127.0.0.1 - - [09/Nov/2026 19:30:46] "GET /static/css/styles.css HTTP/1.1" 200 -
+---------------------------- Captured log teardown -----------------------------
+INFO     werkzeug:_internal.py:187 127.0.0.1 - - [09/Nov/2026 19:30:56] "GET /api/pacientes HTTP/1.1" 200 -
+INFO     werkzeug:_internal.py:187 127.0.0.1 - - [09/Nov/2026 19:30:56] "GET /api/pacientes HTTP/1.1" 200 -
+- generated xml file: /Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/reports/demo/e2e-red/junit.xml -
+- Generated html report: file:///Users/victorsaravia/Desktop/6Semestre/Calidad%20y%20Automatizacio%CC%81n%20en%20Ingenieri%CC%81a%20Software/proyecto-final-calidad-automatizacion/reports/demo/e2e-red/report.html -
+=========================== short test summary info ============================
+FAILED tests/e2e/test_smoke_registration.py::test_registro_y_listado_persisten_al_recargar[chromium]
+====================== 1 failed, 16 deselected in 11.60s =======================

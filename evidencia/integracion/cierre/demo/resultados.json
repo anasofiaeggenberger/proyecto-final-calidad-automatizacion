@@ -1,0 +1,17 @@
+[
+  {
+    "capa": "unit",
+    "fallo": 1,
+    "restauracion": 0
+  },
+  {
+    "capa": "integration",
+    "fallo": 1,
+    "restauracion": 0
+  },
+  {
+    "capa": "e2e",
+    "fallo": 1,
+    "restauracion": 0
+  }
+]

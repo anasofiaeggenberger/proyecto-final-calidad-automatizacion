@@ -1,0 +1,7 @@
+.venv/bin/python -m ruff check app.py api domain services tests scripts
+.venv/bin/python -m pytest tests/unit tests/notifications tests/integration tests/e2e -q --tracing retain-on-failure --screenshot only-on-failure --output reports/final/artifacts --junitxml reports/final/junit.xml --html reports/final/report.html --self-contained-html
+.venv/bin/python scripts/ejecutar_e2e.py --suite regression --browser chromium --report-dir reports/e2e/local-chromium
+.venv/bin/python scripts/ejecutar_e2e.py --suite regression --browser firefox --report-dir reports/e2e/local-firefox
+
+Resultado conjunto extraído del JUnit: {"tests": 157, "failures": 0, "errors": 0, "skipped": 0}
+Lint: All checks passed!

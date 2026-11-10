@@ -1,0 +1,8 @@
+{
+  "url": "http://127.0.0.1:53862",
+  "health": {
+    "ambiente": "e2e-local",
+    "estado": "ok",
+    "version": "e2e-local"
+  }
+}

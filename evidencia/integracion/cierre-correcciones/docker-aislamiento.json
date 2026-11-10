@@ -1,0 +1,22 @@
+{
+  "concurrencia_http": {
+    "altas": 160,
+    "ids_unicos": 160,
+    "retiros_unicos": 160,
+    "delete_204": 1,
+    "delete_404": 39,
+    "prioridad_fifo_ordenados": true
+  },
+  "cleanup_rechaza_propiedad_incorrecta": true,
+  "cleanup_a_conserva_b": true,
+  "proyectos": [
+    "hospital-build-d018d9e85b564a30a7a04076a440e6c7",
+    "hospital-build-7d395fe3117d4b00bc9d61c027bb084d"
+  ],
+  "urls": [
+    "http://127.0.0.1:55001",
+    "http://127.0.0.1:55002"
+  ],
+  "image_id": "sha256:96e6620910d33dfb1d272da9d5fff77d8cd839afeca000784a7e48f56c63d407",
+  "base_mas_cambios_sin_commit": "ae5cab5889cc7b318423b1cc76cfa7740df309d0"
+}

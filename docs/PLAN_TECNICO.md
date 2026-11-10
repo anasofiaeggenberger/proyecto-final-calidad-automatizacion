@@ -1,5 +1,11 @@
 # Plan técnico de pruebas y CI/CD
 
+> **Actualización de implementación — 9 de noviembre de 2026.** Esta rama contiene dominio y
+> unitarias de Ana, API/HTTP/Docker/ambientes de Juan y 17 E2E con POM, gate, SMTP y demo.
+> El resto del documento conserva la planificación original: sus estados “futuro” o “no existe”
+> describen la base que se revisó entonces. El estado vigente está en README.md,
+> docs/ESTADO_PROYECTO.md y EVIDENCIA.md. Jenkins/SMTP real y entrega final siguen pendientes.
+
 ## 0. Alcance, fuentes y estados
 
 Este documento define una estrategia técnica para el sistema hospitalario Flask de este repositorio. En esta etapa es documentación: no implementa pruebas, API JSON, Docker, Jenkins ni cambios de producción.

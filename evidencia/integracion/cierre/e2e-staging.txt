@@ -1,0 +1,20 @@
+{
+  "suite": "smoke",
+  "browser": "firefox",
+  "commit": "fbe8565fedaba4e264d3de3f54112daffe9c6009",
+  "url": "http://127.0.0.1:8002"
+}
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-8.4.2, pluggy-1.7.0 -- /Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/.venv/bin/python
+cachedir: .pytest_cache
+metadata: {'Python': '3.12.13', 'Platform': 'macOS-15.7.4-arm64-arm-64bit', 'Packages': {'pytest': '8.4.2', 'pluggy': '1.7.0'}, 'Plugins': {'metadata': '3.1.1', 'cov': '6.3.0', 'html': '4.2.0', 'playwright': '0.10.0'}}
+rootdir: /Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion
+configfile: pytest.ini
+plugins: metadata-3.1.1, cov-6.3.0, html-4.2.0, playwright-0.10.0
+collecting ... collected 17 items / 16 deselected / 1 selected
+
+tests/e2e/test_smoke_registration.py::test_registro_y_listado_persisten_al_recargar[firefox] PASSED [100%]
+
+- generated xml file: /Users/victorsaravia/Desktop/6Semestre/Calidad y Automatización en Ingeniería Software/proyecto-final-calidad-automatizacion/reports/e2e/deployed-staging/junit.xml -
+- Generated html report: file:///Users/victorsaravia/Desktop/6Semestre/Calidad%20y%20Automatizacio%CC%81n%20en%20Ingenieri%CC%81a%20Software/proyecto-final-calidad-automatizacion/reports/e2e/deployed-staging/report.html -
+======================= 1 passed, 16 deselected in 2.16s =======================

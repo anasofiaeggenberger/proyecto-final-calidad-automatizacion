@@ -1,0 +1,8 @@
+{
+  "url": "http://127.0.0.1:8001",
+  "health": {
+    "ambiente": "ci",
+    "estado": "ok",
+    "version": "4010a7e3a09e6d39605932355a226c5dacad7c2a"
+  }
+}

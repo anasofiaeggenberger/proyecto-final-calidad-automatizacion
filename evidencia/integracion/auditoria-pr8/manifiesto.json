@@ -1,0 +1,74 @@
+{
+  "fecha": "2026-11-09T20:41:34.384819-06:00",
+  "sha_base": "09ccc08f6a84f0ed8ee6a08ee5bbd7b1f7eb059d",
+  "main_integrado": "4dde2eb06f871eeecbf7d35c364826542a7434c5",
+  "estado": "base mas cambios de auditoria sin commit; comparar hashes con el commit final",
+  "fuentes_sha256": {
+    "scripts/notificar_fallo.py": "7ded14a6125e586cad4f9123d4d9f437a01f8e4a4b6f394f56771df2266ced23",
+    "scripts/auditar_concurrencia.py": "e8579b6b0bd964969939f639a31fdf1dac87b7e1358354f1f4dd03961b892392",
+    "tests/notifications/test_failure_notification.py": "bc0f2e0316596ab27169ba82e07a534d7386cf7b4c63fc81273344702157a009",
+    "tests/notifications/test_notification_cli.py": "fec84032367fa067c4f7f7f6989c7066dfa809e46704a14c8ede84fd0bb9b5c5",
+    "Jenkinsfile": "38eefbeee4fe012f0faaf4aa2657ecd9e99d07d6c41d1954f6526ea63acb00f7"
+  },
+  "resultados": {
+    "integracion.xml": {
+      "tests": 71,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "unitarias.xml": {
+      "tests": 59,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "notificaciones.xml": {
+      "tests": 22,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "e2e-firefox-smoke": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "e2e-chromium-regression": {
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "e2e-chromium-smoke": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "e2e-firefox-regression": {
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "pipeline": {
+    "shell_blocks_validos": 20,
+    "health_gate_operativo_identico_a_main": true,
+    "nota": "Se excluye únicamente el registro env.FAILED_STAGE que ya existía en PR8",
+    "groovy_validado": false
+  },
+  "jenkins_ejecutado": false,
+  "correo_enviado": false,
+  "ambiente": "HTTP local aislado, macOS, Python 3.12.13",
+  "comandos": [
+    "python -m ruff check app.py api domain services tests scripts",
+    "python -m pytest tests/unit -q --cov=domain --cov=services --cov-fail-under=90",
+    "python -m pytest tests/notifications -q",
+    "python -m pytest tests/integration -q",
+    "python scripts/ejecutar_e2e.py --suite {smoke,regression} --browser {chromium,firefox} --report-dir reports/audit/e2e-<browser>-<suite>",
+    "python scripts/auditar_concurrencia.py (exit 1 esperado)"
+  ]
+}

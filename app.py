@@ -1,4 +1,5 @@
 import os
+import secrets
 
 from flask import Flask, flash, redirect, render_template, request, url_for
 
@@ -23,9 +24,7 @@ def create_app(config=None, service=None):
     """Crea una aplicación Flask con un servicio de pacientes por instancia."""
 
     flask_app = Flask(__name__)
-    flask_app.config["SECRET_KEY"] = os.environ.get(
-        "FLASK_SECRET_KEY", "hospital-dashboard-development-key"
-    )
+    flask_app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
     # ambiente y versión del artefacto se inyectan por entorno y se exponen en /api/health
     flask_app.config["AMBIENTE"] = os.environ.get("APP_AMBIENTE", "local")
     flask_app.config["VERSION"] = os.environ.get("APP_VERSION", "desconocida")
