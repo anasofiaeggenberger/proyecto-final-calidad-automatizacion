@@ -1,0 +1,17 @@
+...........................................................              [100%]
+- generated xml file: $REPO/reports/audit/unitarias.xml -
+================================ tests coverage ================================
+______________ coverage: platform darwin, python 3.12.13-final-0 _______________
+
+Name                          Stmts   Miss  Cover   Missing
+-----------------------------------------------------------
+domain/__init__.py                3      0   100%
+domain/patient.py                26      1    96%   43
+domain/patient_queue.py          37      0   100%
+services/__init__.py              2      0   100%
+services/patient_service.py      46      0   100%
+-----------------------------------------------------------
+TOTAL                           114      1    99%
+Coverage XML written to file reports/audit/coverage.xml
+Required test coverage of 90% reached. Total coverage: 99.12%
+59 passed in 0.06s

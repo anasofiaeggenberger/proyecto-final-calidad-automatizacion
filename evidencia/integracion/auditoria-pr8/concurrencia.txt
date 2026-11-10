@@ -1,0 +1,23 @@
+{
+  "tecnica": "dos threads reales; barrera mediante sys.settrace antes de operaciones no atomicas",
+  "altas": [
+    {
+      "result": "p-0001"
+    },
+    {
+      "result": "p-0001"
+    }
+  ],
+  "ids_duplicados": true,
+  "llegadas_duplicadas": true,
+  "prioridades_ordenadas": true,
+  "fifo_univoco": false,
+  "eliminacion": [
+    "IndexError",
+    "ok"
+  ],
+  "atencion": [
+    "IndexError",
+    "ok"
+  ]
+}

@@ -19,7 +19,7 @@ pipeline {
         )
         choice(
             name: 'SUITE',
-            choices: ['smoke', 'regression'],
+            choices: ['regression', 'smoke'],
             description: 'smoke ejecuta sólo los casos marcados; regression ejecuta la suite completa.'
         )
     }

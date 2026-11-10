@@ -38,6 +38,13 @@ def build_message(sender: str, to: str, *, build: str, commit: str, environment:
 def send_message(message: EmailMessage, config: dict, username: str, password: str) -> None:
     if not username or not password:
         raise ValueError("Faltan credenciales SMTP")
+    if not isinstance(config, dict):
+        raise ValueError("Configuración SMTP inválida")
+    for field in ("host",):
+        if not isinstance(config.get(field), str) or not config[field].strip():
+            raise ValueError("Configuración SMTP inválida")
+    if type(config.get("port")) is not int or not 1 <= config["port"] <= 65535:
+        raise ValueError("Puerto SMTP inválido")
     mode = config.get("tls", "starttls")
     context = ssl.create_default_context()
     host, port = config["host"], int(config["port"])
@@ -53,7 +60,9 @@ def send_message(message: EmailMessage, config: dict, username: str, password: s
             smtp.starttls(context=context)
             smtp.ehlo()
         smtp.login(username, password)
-        smtp.send_message(message)
+        refused = smtp.send_message(message)
+        if refused:
+            raise smtplib.SMTPRecipientsRefused(refused)
 
 
 def main() -> int:
@@ -68,6 +77,8 @@ def main() -> int:
     }
     try:
         config = json.loads(Path(os.environ["SMTP_CONFIG_FILE"]).read_text(encoding="utf-8"))
+        if not isinstance(config, dict):
+            raise ValueError("Configuración SMTP inválida")
         message = build_message(
             config["sender"], args.to, build=args.build, commit=args.commit,
             environment=args.environment, stage=args.stage, log_url=args.log_url,

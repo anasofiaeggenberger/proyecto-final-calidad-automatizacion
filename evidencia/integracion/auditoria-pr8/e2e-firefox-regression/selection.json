@@ -1,0 +1,6 @@
+{
+  "suite": "regression",
+  "browser": "firefox",
+  "commit": "09ccc08f6a84f0ed8ee6a08ee5bbd7b1f7eb059d",
+  "url": "servidor HTTP local en puerto din\u00e1mico"
+}

@@ -10,7 +10,7 @@ Documento compartido del equipo. Cada integrante mantiene su propia sección y s
 | Unitarias | Ana Sofía | 59 | verde (cobertura 99.12 %, umbral 90 %) |
 | Integración HTTP | Juan Pablo | 71 (3 marcados `smoke`) | verde contra el contenedor desplegado |
 | E2E Playwright | Víctor | 17 (1 marcado smoke) | verde en Chromium y Firefox; también contra Docker |
-| Notificaciones | Víctor | 10 | verde, sin envío real |
+| Notificaciones | Víctor | 22 | verde local en auditoría PR8, sin envío real |
 
 ---
 
@@ -170,3 +170,12 @@ Completar estas filas en el entorno del equipo antes de presentar la entrega com
 
 El guion y la configuración están en docs/DEMO.md y docs/JENKINS.md.
 El tag final y la entrega MIU corresponden al cierre integrado del equipo.
+
+## Actualización de auditoría PR #8
+
+Ver [informe de auditoría](docs/AUDITORIA_PR8.md).
+La evidencia anterior conserva sus SHAs y conteos históricos. La auditoría actual registra
+22 pruebas SMTP, cobertura 99.12 % y smoke/regression en ambos navegadores.
+No se considera validado el aislamiento entre jobs: disableConcurrentBuilds sólo protege
+el mismo job; Compose y su cleanup comparten nombres y puertos. La solución compartida
+requiere aprobación. Dominio concurrente, Jenkins real y SMTP recibido siguen pendientes.

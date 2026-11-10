@@ -4,7 +4,7 @@ Documento compartido del equipo. Cada integrante mantiene su propia sección.
 
 - Ana Sofía: dominio, pruebas unitarias, cobertura y gate de calidad. *(pendiente)*
 - Juan Pablo: API REST, integración, Docker, ambientes y gate de integración.
-- Víctor: Playwright/POM, gate E2E, notificaciones SMTP y demo. *(pendiente)*
+- Víctor: Playwright/POM, gate E2E, notificaciones SMTP y demo implementados; validación operativa pendiente.
 
 ---
 
@@ -207,3 +207,12 @@ https://www.jenkins.io/doc/pipeline/steps/credentials-binding/. Consulta: 9 nov.
 
 [8] Python Software Foundation, “smtplib — SMTP protocol client,” Python 3.12.
 [En línea]. Disponible: https://docs.python.org/3.12/library/smtplib.html. Consulta: 9 nov. 2026.
+
+## Actualización de auditoría PR #8
+
+Ver [informe de auditoría](docs/AUDITORIA_PR8.md).
+La evidencia anterior conserva sus SHAs y conteos históricos. La auditoría actual registra
+22 pruebas SMTP, cobertura 99.12 % y smoke/regression en ambos navegadores.
+No se considera validado el aislamiento entre jobs: disableConcurrentBuilds sólo protege
+el mismo job; Compose y su cleanup comparten nombres y puertos. La solución compartida
+requiere aprobación. Dominio concurrente, Jenkins real y SMTP recibido siguen pendientes.

@@ -1,0 +1,20 @@
+{
+  "suite": "smoke",
+  "browser": "firefox",
+  "commit": "09ccc08f6a84f0ed8ee6a08ee5bbd7b1f7eb059d",
+  "url": "servidor HTTP local en puerto din\u00e1mico"
+}
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-8.4.2, pluggy-1.7.0 -- $REPO/.venv/bin/python
+cachedir: .pytest_cache
+metadata: {'Python': '3.12.13', 'Platform': 'macOS-15.7.4-arm64-arm-64bit', 'Packages': {'pytest': '8.4.2', 'pluggy': '1.7.0'}, 'Plugins': {'metadata': '3.1.1', 'cov': '6.3.0', 'html': '4.2.0', 'playwright': '0.10.0'}}
+rootdir: $REPO
+configfile: pytest.ini
+plugins: metadata-3.1.1, cov-6.3.0, html-4.2.0, playwright-0.10.0
+collecting ... collected 17 items / 16 deselected / 1 selected
+
+tests/e2e/test_smoke_registration.py::test_registro_y_listado_persisten_al_recargar[firefox] PASSED [100%]
+
+- generated xml file: $REPO/reports/audit/e2e-firefox-smoke/junit.xml -
+- Generated html report: file:///Users/victorsaravia/Desktop/6Semestre/Calidad%20y%20Automatizacio%CC%81n%20en%20Ingenieri%CC%81a%20Software/proyecto-final-calidad-automatizacion/reports/audit/e2e-firefox-smoke/report.html -
+======================= 1 passed, 16 deselected in 2.51s =======================

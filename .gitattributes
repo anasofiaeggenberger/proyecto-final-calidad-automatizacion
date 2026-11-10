@@ -1,2 +1,5 @@
 # Los parches de demo contienen líneas de contexto del formato diff.
 demo/fallas/*.patch -whitespace
+
+# Conservar literalmente salidas históricas de pytest y JUnit.
+evidencia/** -whitespace

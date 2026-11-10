@@ -5,7 +5,7 @@ historiales de todas las ramas remotas; no se modificó main ni se abrió un PR.
 
 | Rama remota | SHA revisado | Aporte y estado en esta rama |
 |---|---|---|
-| main | d682281 | Base: dashboard y dominio/unitarias/cobertura de Ana |
+| main | 4dde2eb | PR #7 de Juan integrado; base actual de la auditoría |
 | docs/test-strategy | e74c9f3 | Plan técnico y guía, ya presentes en la base |
 | docs/final-team-alignment | 8852924 | Contrato API y reparto, ya presentes en la base |
 | docs/final-consistency-review | 9e7d9ac | Revisión documental, ya presente en la base |
@@ -20,7 +20,7 @@ historiales de todas las ramas remotas; no se modificó main ni se abrió un PR.
 - Suite Playwright y POM con estado aislado: 17 casos, smoke y regresión, Chromium y Firefox.
 - Gate E2E conectado después de integración, elección de navegador y reportes.
 - Lint previo al build, tracking de etapa fallida y timeout.
-- Código SMTP por credenciales inyectadas y 10 pruebas sin envío real.
+- Código SMTP por credenciales inyectadas y 22 pruebas sin envío real.
 - Fallas reales y reversibles para las tres capas, con guion y evidencia local.
 - Documentación operativa, justificación SOLID, matriz E2E y evidencia ordenada.
 
@@ -38,3 +38,12 @@ su trabajo. La aplicación de negocio y el contrato API no cambian por las prueb
 
 El código de infraestructura existe y fue comprobado por componentes localmente;
 eso no equivale a un build Jenkins ni a un correo recibido.
+
+## Actualización de auditoría PR #8
+
+Ver [informe de auditoría](AUDITORIA_PR8.md).
+La evidencia anterior conserva sus SHAs y conteos históricos. La auditoría actual registra
+22 pruebas SMTP, cobertura 99.12 % y smoke/regression en ambos navegadores.
+No se considera validado el aislamiento entre jobs: disableConcurrentBuilds sólo protege
+el mismo job; Compose y su cleanup comparten nombres y puertos. La solución compartida
+requiere aprobación. Dominio concurrente, Jenkins real y SMTP recibido siguen pendientes.

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.032" timestamp="2026-11-09T20:37:03.641332-06:00" hostname="Victors-MacBook-Pro.local"><testcase classname="tests.notifications.test_failure_notification" name="test_rechazo_parcial_no_se_informa_como_exito[refused0]" time="0.007"><failure message="Failed: DID NOT RAISE &lt;class 'smtplib.SMTPRecipientsRefused'&gt;">monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x1034fd3a0&gt;
+refused = {'destino@example.test': (550, b'rejected')}
+
+    @pytest.mark.parametrize("refused", [{"destino@example.test": (550, b"rejected")}])
+    def test_rechazo_parcial_no_se_informa_como_exito(monkeypatch, refused):
+        import smtplib
+        factory = MagicMock()
+        factory.return_value.__enter__.return_value.send_message.return_value = refused
+        monkeypatch.setattr("scripts.notificar_fallo.smtplib.SMTP", factory)
+&gt;       with pytest.raises(smtplib.SMTPRecipientsRefused):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE &lt;class 'smtplib.SMTPRecipientsRefused'&gt;
+
+tests/notifications/test_failure_notification.py:74: Failed</failure></testcase></testsuite></testsuites>

@@ -1,0 +1,11 @@
+{
+  "stage_notificaciones": {
+    "exit": 0,
+    "junit_creado": true,
+    "stdout": "......................                                                   [100%]\n- generated xml file: /private/var/folders/z1/0mf1rsys4m7f1qmb7bcwktsr0000gn/T/hospital-clean-d0cvoa7s/reports/notifications/junit.xml -\n22 passed in 0.07s\n"
+  },
+  "test_rojo_controlado": {
+    "exit": 1,
+    "junit_creado": true
+  }
+}

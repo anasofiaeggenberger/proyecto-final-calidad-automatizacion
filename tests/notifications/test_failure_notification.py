@@ -34,6 +34,7 @@ def test_admite_varios_destinatarios():
 
 def test_starttls_ocurre_antes_del_login(monkeypatch):
     factory = MagicMock()
+    factory.return_value.__enter__.return_value.send_message.return_value = {}
     smtp = factory.return_value.__enter__.return_value
     monkeypatch.setattr("scripts.notificar_fallo.smtplib.SMTP", factory)
     send_message(message(), {"host": "smtp.example.test", "port": 587}, "usuario", "secreto-de-prueba")
@@ -44,6 +45,7 @@ def test_starttls_ocurre_antes_del_login(monkeypatch):
 
 def test_ssl_no_degrada_a_conexion_sin_tls(monkeypatch):
     factory = MagicMock()
+    factory.return_value.__enter__.return_value.send_message.return_value = {}
     monkeypatch.setattr("scripts.notificar_fallo.smtplib.SMTP_SSL", factory)
     send_message(message(), {"host": "smtp.example.test", "port": 465, "tls": "ssl"}, "usuario", "secreto-de-prueba")
     smtp = factory.return_value.__enter__.return_value
@@ -55,6 +57,7 @@ def test_ssl_no_degrada_a_conexion_sin_tls(monkeypatch):
 @pytest.mark.parametrize("username,password", [("", "clave"), ("usuario", "")])
 def test_no_abre_red_sin_credenciales(monkeypatch, username, password):
     factory = MagicMock()
+    factory.return_value.__enter__.return_value.send_message.return_value = {}
     monkeypatch.setattr("scripts.notificar_fallo.smtplib.SMTP", factory)
     with pytest.raises(ValueError):
         send_message(message(), {"host": "smtp.example.test", "port": 587}, username, password)
@@ -64,3 +67,15 @@ def test_no_abre_red_sin_credenciales(monkeypatch, username, password):
 def test_rechaza_modo_smtp_sin_tls():
     with pytest.raises(ValueError):
         send_message(message(), {"host": "smtp.example.test", "port": 25, "tls": "none"}, "usuario", "clave")
+
+def test_rechazo_parcial_no_se_informa_como_exito(monkeypatch):
+    import smtplib
+    factory = MagicMock()
+    factory.return_value.__enter__.return_value.send_message.return_value = {
+        "otro@example.test": (550, b"rejected")
+    }
+    monkeypatch.setattr("scripts.notificar_fallo.smtplib.SMTP", factory)
+    email = message()
+    email.replace_header("To", "destino@example.test, otro@example.test")
+    with pytest.raises(smtplib.SMTPRecipientsRefused):
+        send_message(email, {"host": "smtp.example.test", "port": 587}, "usuario", "clave")

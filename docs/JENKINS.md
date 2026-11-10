@@ -19,7 +19,7 @@ disableConcurrentBuilds evita solapamientos del mismo job. El post apaga ambos a
 
 ## Parámetros y gates
 
-ENVIRONMENT=ci/staging selecciona la instancia. SUITE=smoke/regression selecciona
+ENVIRONMENT=ci/staging selecciona la instancia. SUITE=regression/smoke (default regression) selecciona
 3/71 casos de integración y 1/17 casos E2E. BROWSER=chromium/firefox cambia el navegador.
 NOTIFY_EMAILS toma el correo de Git como default y permite editar destinatarios al lanzar.
 
@@ -65,3 +65,12 @@ Las pruebas locales de notificaciones sólo verifican el código; no acreditan l
 Fuentes: [Pipeline Syntax](https://www.jenkins.io/doc/book/pipeline/syntax/),
 [Credentials Binding](https://www.jenkins.io/doc/pipeline/steps/credentials-binding/) y
 [HTML Publisher](https://www.jenkins.io/doc/pipeline/steps/htmlpublisher/).
+
+## Actualización de auditoría PR #8
+
+Ver [informe de auditoría](AUDITORIA_PR8.md).
+La evidencia anterior conserva sus SHAs y conteos históricos. La auditoría actual registra
+22 pruebas SMTP, cobertura 99.12 % y smoke/regression en ambos navegadores.
+No se considera validado el aislamiento entre jobs: disableConcurrentBuilds sólo protege
+el mismo job; Compose y su cleanup comparten nombres y puertos. La solución compartida
+requiere aprobación. Dominio concurrente, Jenkins real y SMTP recibido siguen pendientes.

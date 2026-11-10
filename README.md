@@ -176,7 +176,7 @@ conserva reportes; el bloque final intenta enviar correo de fallo/timeout y apag
 | Parámetro | Valores | Efecto |
 |---|---|---|
 | ENVIRONMENT | ci, staging | Instancia/puerto/ambiente expuesto por health |
-| SUITE | smoke, regression | Cambia la selección de integración y E2E |
+| SUITE | regression (default), smoke | Cambia la selección de integración y E2E |
 | BROWSER | chromium, firefox | Cambia el motor E2E |
 | NOTIFY_EMAILS | Correo de Git predeterminado, editable | Destinatarios del fallo |
 
@@ -212,3 +212,18 @@ La planificación original y las decisiones implementadas están documentadas en
 - [Evidencia de ejecución](EVIDENCIA.md): resultados verificados y lo que sigue pendiente.
 
 Las secciones de esos planes marcadas como planificadas siguen siendo trabajo futuro; `EVIDENCIA.md` indica qué está verificado y qué no. Para colaborar, cada integrante debe trabajar en una rama propia, mantener su alcance, ejecutar las verificaciones de su cambio y abrir un PR con evidencia. Ana Sofía es responsable de lógica/unitarias/cobertura/gate de calidad; Juan Pablo de API/integración/Docker/ambientes/gate de integración; y Víctor de Playwright/POM/gate E2E/notificaciones/demo. No se deben hacer commits, pushes ni merges a nombre de otra persona ni guardar secretos en el repositorio.
+
+## Auditoría del PR #8
+
+Ver [informe final](docs/AUDITORIA_PR8.md): SMTP corregido, 22 pruebas de notificaciones y
+188 ejecuciones aprobadas. Persisten concurrencia heredada y aislamiento entre jobs por
+resolver con los responsables. Jenkins real y recepción SMTP siguen pendientes.
+
+## Actualización de auditoría PR #8
+
+Ver [informe de auditoría](docs/AUDITORIA_PR8.md).
+La evidencia anterior conserva sus SHAs y conteos históricos. La auditoría actual registra
+22 pruebas SMTP, cobertura 99.12 % y smoke/regression en ambos navegadores.
+No se considera validado el aislamiento entre jobs: disableConcurrentBuilds sólo protege
+el mismo job; Compose y su cleanup comparten nombres y puertos. La solución compartida
+requiere aprobación. Dominio concurrente, Jenkins real y SMTP recibido siguen pendientes.
