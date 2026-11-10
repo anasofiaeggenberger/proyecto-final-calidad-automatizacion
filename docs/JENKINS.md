@@ -1,80 +1,146 @@
 # Jenkins y notificaciones
 
-> **Estado actualizado:** concurrencia y aislamiento entre builds corregidos y probados.
-> Ver [cierre de correcciones](CIERRE_CORRECCIONES.md). Los estados anteriores se conservan como historial;
-> quedan únicamente las comprobaciones externas de Jenkins/SMTP y la entrega del equipo.
+> **Estado:** el pipeline conserva los gates de calidad, construcción, despliegue,
+> health, integración y E2E. El cambio de Playwright de esta rama sólo evita instalar
+> paquetes del sistema durante un build Jenkins sin privilegios root.
 
 ## Requisitos del agente
 
-Python 3.12, python3 en PATH para el correo, uv, Git, Docker Engine y Compose v2.
-Usar un agente dedicado al proyecto, con acceso al daemon Docker. En Linux, preparar las
-bibliotecas de Playwright o permitir que playwright install --with-deps las instale.
-El timeout E2E incluye la preparación del navegador; conviene precargar navegadores para la demo.
+El agente que ejecute este job debe tener:
 
-Plugins: Pipeline/Declarative, Git, JUnit, Credentials Binding y HTML Publisher.
-Configurar un job Pipeline from SCM que lea Jenkinsfile de la rama elegida. No crear etapas
-a mano en la UI. pollSCM revisa cambios cada dos minutos; la primera ejecución registra
-parámetros y activa el trigger. La rama de entrega es feat/victor-e2e-playwright; la demo
-de fallos usa otro job/rama demo/ para no romperla.
+- Python 3.12 y python3 en PATH (el post de notificación usa python3).
+- uv, Git, Docker Engine y el plugin Compose v2.
+- Acceso controlado al daemon Docker, por socket o por la configuración aprobada del nodo.
+- Un workspace exclusivo o aislado para este job. El Jenkinsfile usa agent any, por lo
+  que la administración de Jenkins debe impedir que el job caiga en un nodo sin estos
+  requisitos.
+- Los plugins Pipeline/Declarative, Git, JUnit, Credentials Binding y HTML Publisher.
 
-CI genera un proyecto hospital-build-<UUID> y puertos de loopback asignados por Docker.
-El helper gestionar_ambiente.py devuelve la URL y el post sólo limpia ese proyecto tras
-verificar etiquetas de propiedad. Los comandos manuales de Compose conservan 8001/8002.
+El Dockerfile de la raíz construye la aplicación, no una imagen de agente Jenkins. No hay
+una imagen de agente Jenkins versionada en este repositorio. La solución mínima reproducible
+es mantener una imagen de agente aprobada por Infraestructura, fijada por digest, que incluya
+Python 3.12, uv, Docker/Compose y las bibliotecas del navegador. Durante la construcción
+de esa imagen, con privilegios de build, debe ejecutarse el equivalente a:
 
-## Parámetros y gates
+~~~
+COPY requirements-ci.txt requirements-e2e.txt /opt/deps/
+RUN uv venv --python 3.12 /opt/venv \
+ && uv pip sync --python /opt/venv/bin/python /opt/deps/requirements-ci.txt \
+ && uv pip install --python /opt/venv/bin/python --require-hashes \
+      -r /opt/deps/requirements-e2e.txt \
+ && /opt/venv/bin/python -m playwright install --with-deps chromium firefox
+~~~
 
-ENVIRONMENT=ci/staging selecciona la instancia. SUITE=regression/smoke (default regression) selecciona
-3/71 casos de integración y 1/17 casos E2E. BROWSER=chromium/firefox cambia el navegador.
-NOTIFY_EMAILS toma el correo de Git como default y permite editar destinatarios al lanzar.
+La base concreta debe ser una imagen Jenkins compatible con el modelo de agente utilizado
+(SSH, inbound o Docker cloud), y debe fijarse por digest en la infraestructura del equipo.
+No se agrega una imagen incompleta al repositorio de la aplicación: elegir una base o un
+modelo de conexión inexistente haría que la receta no fuera reproducible. La instalación
+con --with-deps queda exclusivamente en la construcción de esa imagen, nunca en cada build.
 
-Orden: checkout, setup, lint, unitarias/cobertura 90 %, pruebas de notificación, build único
-etiquetado con SHA completo, deploy --no-build, health con SHA/ambiente, integración y E2E.
-Las etapas siguientes no corren si un comando falla. El timeout global es 30 minutos y el de
-E2E 8 minutos. Los abortos por timeout también intentan notificar.
+En el job, Setup Python puede seguir creando .venv y sincronizando los requirements
+hash-pinned del workspace. En E2E Tests, el Jenkinsfile ejecuta sólo:
 
-JUnit y cobertura se archivan; HTML Publisher publica reports/e2e/report.html.
-También se conservan screenshots/traces, metadatos de selección y health.
-Si Jenkins restringe JavaScript del HTML, descargar el artefacto para verlo localmente;
-no es necesario relajar la política global de seguridad.
+~~~
+python -m playwright install "$BROWSER"
+~~~
 
-## Configuración SMTP pendiente
+Esto instala el navegador seleccionado para la versión de Playwright del proyecto; no intenta
+instalar paquetes OS ni requiere root. Si la imagen precarga también los navegadores, se debe
+conservar la misma versión de Playwright y comprobar el cache antes de presentar el build.
 
-No existe un servidor ni credenciales SMTP proporcionados para esta entrega local.
-No se afirma que un correo haya sido enviado o recibido.
+## Job, polling y parámetros
 
-Crear en Jenkins, dentro del ámbito del job:
+Configurar un job Pipeline from SCM para leer el Jenkinsfile del commit o rama aprobados.
+No crear etapas manualmente en la UI. Para la entrega, no usar la rama histórica
+feat/victor-e2e-playwright; esta corrección se valida en fix/final-jenkins-playwright y
+debe quedar seleccionada la referencia final aprobada por el equipo.
 
-1. Secret file con ID smtp-config: JSON según smtp-config.example.json, usando host, puerto,
-   tls=starttls (587) o ssl (465), y sender autorizado.
-2. Username with password con ID smtp-auth: usuario SMTP y contraseña/token del proveedor.
-3. Seleccionar NOTIFY_EMAILS con los destinatarios autorizados para el build de demo.
+El trigger actual es pollSCM('H/2 * * * *'). Se conserva porque forma parte de la
+configuración existente, pero puede provocar builds innecesarios por cada cambio de
+documentación, evidencia o rama que observe el job. disableConcurrentBuilds() evita dos
+ejecuciones simultáneas del mismo job, pero no deduplica otros jobs ni elimina builds ya
+encolados. La opción preferible es webhook del SCM; si polling es obligatorio, acordar una
+frecuencia menos agresiva y filtrar el alcance en la configuración del job. No deshabilitar
+el trigger sin reemplazar el mecanismo de integración requerido.
 
-El Jenkinsfile inyecta SMTP_CONFIG_FILE, SMTP_USERNAME y SMTP_PASSWORD sólo durante
-la notificación. Los secretos no se escriben en el repositorio, argumentos o logs.
-Se usa smtplib con certificados verificados y sin fallback a texto plano.
-Email Extension no es necesario.
+Parámetros:
 
-El correo incluye número de build, SHA, ambiente, etapa fallida y enlace a console.
-unsuccessful cubre fallo y aborto. Un fallo SMTP no convierte el build original en verde.
-reports/notifications/status.json diferencia accepted_by_smtp de failed cuando el script
-llega a ejecutarse; credenciales ausentes en Jenkins se registran en el log del post.
+- ENVIRONMENT=ci|staging: instancia y ambiente verificados por health.
+- SUITE=regression|smoke: regression es el valor predeterminado; smoke selecciona los
+  casos marcados.
+- BROWSER=chromium|firefox: motor de Playwright.
+- NOTIFY_EMAILS: destinatarios autorizados, editables al lanzar el job.
 
-## Validación final que requiere el entorno del equipo
+Cada build crea un proyecto Compose hospital-build-<UUID>, despliega la única imagen
+etiquetada con el SHA completo, obtiene una URL de loopback y limpia sólo su propio proyecto.
+Los comandos manuales de Compose conservan los puertos 8001/8002.
 
-Ejecutar un build sano, otro con cada falla de demo y otro restaurado; comprobar gates
-y artifacts. Recibir el correo real y guardar captura del buzón. Registrar links y números
-reales en EVIDENCIA.md, incluyendo un build en cada ambiente y un timeout.
-Las pruebas locales de notificaciones sólo verifican el código; no acreditan la entrega SMTP.
+## Orden, gates y reportes
+
+El orden es:
+
+1. Checkout y Setup Python.
+2. Ruff.
+3. Unit Tests + Coverage, con umbral de 90 %.
+4. Notification Tests.
+5. Build Artifact.
+6. Deploy.
+7. Health Gate.
+8. Integration Tests.
+9. E2E Tests.
+
+Un comando con código distinto de cero detiene las etapas posteriores. El Health Gate conserva
+la corrección de d07d642: redirige stdout y stderr al reporte, guarda el código de
+verificar_health.py, publica el reporte con cat y termina con el mismo código. Por ello un
+health inválido impide entrar a Integration Tests. El cleanup y la publicación de reportes
+están en post y no convierten un build fallido en exitoso.
+
+Se publican JUnit de unitarias, notificaciones, integración y E2E; cobertura, logs de build y
+health; y el reporte HTML E2E junto con screenshots, traces y metadatos. Si Jenkins restringe
+JavaScript del HTML, descargar el artefacto para verlo localmente; no relajar la seguridad
+global.
+
+La evidencia aportada para el cierre informa un Build #3 exitoso con Ruff, 67 unitarias,
+35 pruebas de notificaciones/pipeline, 71 de integración, 17 E2E Chromium, cobertura
+99.19 %, deploy/health/cleanup Docker y reportes publicados. Ese dato es evidencia de una
+instancia temporal y no una ejecución reproducida en este checkout. Tampoco prueba el envío
+o la recepción de un correo SMTP real.
+
+## Credenciales y notificaciones SMTP
+
+No se incluyen secretos ni se afirma que SMTP real haya sido probado. Crear en Jenkins,
+dentro del alcance del job:
+
+1. Secret file, ID smtp-config, siguiendo la estructura de
+   docs/smtp-config.example.json con host, puerto, tls=starttls (587) o ssl (465) y
+   sender autorizado.
+2. Username with password, ID smtp-auth, con usuario y contraseña/token del proveedor.
+3. NOTIFY_EMAILS con destinatarios autorizados para la demo.
+
+El Jenkinsfile inyecta SMTP_CONFIG_FILE, SMTP_USERNAME y SMTP_PASSWORD sólo dentro
+del post fallido. set +x evita trazarlos; no deben aparecer en repositorio, argumentos ni
+logs. scripts/notificar_fallo.py usa certificados verificados, STARTTLS o SMTPS, y no
+degrada a texto plano. Email Extension no es necesario.
+
+La notificación incluye build, SHA, ambiente, etapa y URL de consola. unsuccessful cubre
+fallos y abortos; un error SMTP no vuelve verde el build original. El reporte
+reports/notifications/status.json diferencia accepted_by_smtp de failed cuando el
+script llega a ejecutarse. Las pruebas locales sólo verifican el código y no acreditan
+entrega en un buzón.
+
+## Validación pendiente
+
+Antes de presentar el cierre como reproducible en el equipo:
+
+- Ejecutar el job desde el agente aprobado y comprobar que Chromium y Firefox arrancan sin
+  privilegios root y con las bibliotecas de la imagen.
+- Ejecutar una falla controlada unitaria, de integración y E2E; verificar etapa roja,
+  etapas posteriores omitidas, cleanup, artefactos y restauración.
+- Configurar SMTP sólo con credenciales del administrador, verificar aceptación y recepción
+  en el buzón autorizado, y registrar esa evidencia separadamente.
+- Registrar número/enlace, SHA, ambiente, suite, navegador, etapa y artefactos reales en
+  EVIDENCIA.md. Los archivos de evidencia por sí solos no sustituyen el build ejecutado.
 
 Fuentes: [Pipeline Syntax](https://www.jenkins.io/doc/book/pipeline/syntax/),
 [Credentials Binding](https://www.jenkins.io/doc/pipeline/steps/credentials-binding/) y
 [HTML Publisher](https://www.jenkins.io/doc/pipeline/steps/htmlpublisher/).
-
-## Actualización de auditoría PR #8
-
-Ver [informe de auditoría](AUDITORIA_PR8.md).
-La evidencia anterior conserva sus SHAs y conteos históricos. La auditoría actual registra
-22 pruebas SMTP, cobertura 99.12 % y smoke/regression en ambos navegadores.
-No se considera validado el aislamiento entre jobs: disableConcurrentBuilds sólo protege
-el mismo job; Compose y su cleanup comparten nombres y puertos. La solución compartida
-requiere aprobación. Dominio concurrente, Jenkins real y SMTP recibido siguen pendientes.
