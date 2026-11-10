@@ -93,20 +93,18 @@ def create_app(config=None, service=None):
     def eliminar_default():
         return redirect(url_for("index", _anchor="queue"))
 
-    @flask_app.route("/eliminar/<nombre>", methods=["GET", "POST"])
-    def eliminar(nombre):
+    @flask_app.route("/eliminar/<patient_id>", methods=["GET", "POST"])
+    def eliminar(patient_id):
         try:
-            paciente = get_patient_service().eliminar_por_nombre(nombre)
-        except InvalidPatientNameError:
-            paciente = None
+            paciente = get_patient_service().eliminar_por_id(patient_id)
         except PatientServiceError as error:
             flash(str(error), "error")
             return redirect(url_for("index", _anchor="queue"))
 
         if paciente:
-            flash(f"{nombre} fue eliminado de la cola.", "success")
+            flash(f"{paciente.nombre} fue eliminado de la cola.", "success")
         else:
-            flash(f"No se encontró a {nombre} en la cola.", "error")
+            flash(f"No se encontró un paciente con ID {patient_id} en la cola.", "error")
         return redirect(url_for("index", _anchor="queue"))
 
     flask_app.register_blueprint(api_bp)

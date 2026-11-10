@@ -213,7 +213,7 @@
                                             </td>
                                             <td class="table-action" data-label="Acciones">
                                                 <form
-                                                    action="{{ url_for('eliminar', nombre=paciente.nombre) }}"
+                                                    action="{{ url_for('eliminar', patient_id=paciente.id) }}"
                                                     method="post"
                                                     onsubmit="return window.confirm('¿Deseas retirar a este paciente de la cola?');"
                                                 >

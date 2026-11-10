@@ -54,8 +54,8 @@ que consume cada recorrido. La justificación SRP/ISP está en DECISIONES.md.
 | E2E-13 | Mismo archivo: duplicados | Equivalencia y transición | Dos pacientes homónimos se conservan; atender retira uno | 1 |
 | E2E-14 | test_responsive_dashboard.py | Equivalencias móvil/tablet | Registro y atención operables sin desbordamiento a 390/768 px | 2 |
 
-La eliminación HTML sigue siendo por nombre según la aplicación existente; eliminar un
-homónimo específico por ID es un pendiente de UI que debe coordinarse, no una ruta inventada.
+La eliminación HTML utiliza el ID único de cada paciente, por lo que los homónimos se eliminan
+de forma inequívoca. El nombre mostrado puede contener `/` sin alterar la acción de eliminación.
 
 ## Fallos y evidencia
 

@@ -204,7 +204,7 @@ Desde el dashboard se puede registrar un paciente, seleccionar su prioridad, obs
 5. Atender dos veces y comprobar que sale primero <code>Paciente urgente A</code> y luego <code>Paciente urgente B</code>.
 6. Atender nuevamente para retirar el paciente de prioridad <code>3</code>.
 
-La API elimina por ID. La acción de eliminación del dashboard actual identifica al paciente por nombre; para demostrar eliminación inequívoca de homónimos, usar la API o nombres distinguibles.
+La API y el dashboard eliminan por el ID único del paciente. Por eso los nombres homónimos y los nombres que contienen <code>/</code> no generan ambigüedad en la acción de eliminación.
 
 ## API REST
 
