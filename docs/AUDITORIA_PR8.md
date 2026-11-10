@@ -1,6 +1,12 @@
 # Auditoría final del PR #8
 
-**Estado: REQUIERE CORRECCIONES ADICIONALES.**
+> **Estado actualizado:** concurrencia y aislamiento entre builds corregidos y probados.
+> Ver [cierre de correcciones](CIERRE_CORRECCIONES.md). Los estados anteriores se conservan como historial;
+> quedan únicamente las comprobaciones externas de Jenkins/SMTP y la entrega del equipo.
+
+**Informe histórico de ae5cab5. Los hallazgos de código se resolvieron tras autorización.**
+
+Estado vigente y pruebas: [Cierre de correcciones](CIERRE_CORRECCIONES.md).
 
 Se corrigieron los defectos SMTP dentro del alcance del PR. Quedan un defecto de concurrencia
 en dominio y una condición insegura de aislamiento entre jobs, además de la validación real

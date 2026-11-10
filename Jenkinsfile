@@ -45,8 +45,6 @@ pipeline {
         INTEGRATION_REPORT_DIR = 'reports/integration'
         BUILD_REPORT_DIR = 'reports/build'
         IMAGE_NAME = 'hospital-queue'
-        CI_PORT = '8001'
-        STAGING_PORT = '8002'
     }
 
     stages {
@@ -102,7 +100,7 @@ pipeline {
         stage('Notification Tests') {
             steps {
                 script { env.FAILED_STAGE = 'Notification Tests' }
-                sh '"$PYTHON_BIN" -m pytest tests/notifications -q --junitxml=reports/notifications/junit.xml'
+                sh '"$PYTHON_BIN" -m pytest tests/notifications tests/pipeline -q --junitxml=reports/notifications/junit.xml'
             }
         }
 
@@ -114,7 +112,10 @@ pipeline {
                         script: 'git rev-parse HEAD',
                         returnStdout: true
                     ).trim()
-                    env.APP_PORT = params.ENVIRONMENT == 'staging' ? env.STAGING_PORT : env.CI_PORT
+                    env.COMPOSE_PROJECT_NAME = sh(
+                        script: '''"$PYTHON_BIN" -c 'import uuid; print("hospital-build-" + uuid.uuid4().hex)' ''',
+                        returnStdout: true
+                    ).trim()
                 }
                 // el artefacto se construye una sola vez por build y queda etiquetado con el SHA
                 sh '''
@@ -143,12 +144,11 @@ pipeline {
                 // --no-build garantiza que se despliega la imagen ya construida, no una nueva
                 sh '''
                     set -eu
-                    mkdir -p "$BUILD_REPORT_DIR"
-                    export APP_VERSION="$COMMIT_SHA"
-                    docker compose --profile "$ENVIRONMENT" down -v --remove-orphans
-                    docker compose --profile "$ENVIRONMENT" up -d --no-build
-                    docker compose --profile "$ENVIRONMENT" ps
+                    "$PYTHON_BIN" scripts/gestionar_ambiente.py deploy \\
+                        --project "$COMPOSE_PROJECT_NAME" --environment "$ENVIRONMENT" \\
+                        --version "$COMMIT_SHA" --report-dir "$BUILD_REPORT_DIR"
                 '''
+                script { env.APP_BASE_URL = readFile('reports/build/endpoint.txt').trim() }
             }
         }
 
@@ -164,7 +164,7 @@ pipeline {
                     # un health invalido no detenia el pipeline
                     set +e
                     "$PYTHON_BIN" scripts/verificar_health.py \\
-                        --url "http://127.0.0.1:$APP_PORT/api/health" \\
+                        --url "$APP_BASE_URL/api/health" \\
                         --ambiente "$ENVIRONMENT" \\
                         --version "$COMMIT_SHA" \\
                         --timeout 90 > "$REPORTE" 2>&1
@@ -187,7 +187,7 @@ pipeline {
                     else
                         MARCADORES=""
                     fi
-                    API_BASE_URL="http://127.0.0.1:$APP_PORT" \\
+                    API_BASE_URL="$APP_BASE_URL" \\
                     EXPECTED_AMBIENTE="$ENVIRONMENT" \\
                     EXPECTED_VERSION="$COMMIT_SHA" \\
                     "$PYTHON_BIN" -m pytest tests/integration -v $MARCADORES \\
@@ -205,7 +205,7 @@ pipeline {
                 sh '''
                     set -eu
                     "$PYTHON_BIN" -m playwright install --with-deps "$BROWSER"
-                    E2E_BASE_URL="http://127.0.0.1:$APP_PORT" \\
+                    E2E_BASE_URL="$APP_BASE_URL" \\
                     E2E_ALLOW_CLEANUP=1 \\
                     EXPECTED_AMBIENTE="$ENVIRONMENT" \\
                     EXPECTED_VERSION="$COMMIT_SHA" \\
@@ -244,22 +244,25 @@ pipeline {
             }
         }
         always {
-            // los contenedores se apagan siempre, también ante fallo o timeout
-            sh '''
-                set +e
-                mkdir -p reports/build
-                docker compose --profile ci --profile staging logs --no-color --tail 200 \\
-                    > "reports/build/compose-logs.txt" 2>&1
-                docker compose --profile ci --profile staging down -v --remove-orphans
-                exit 0
-            '''
             script {
+                def cleanupStatus = 0
+                if (fileExists('reports/build/deployment.json')) {
+                    if (currentBuild.currentResult == 'SUCCESS') {
+                        env.FAILED_STAGE = 'Cleanup'
+                    }
+                    cleanupStatus = sh(
+                        script: '"$PYTHON_BIN" scripts/gestionar_ambiente.py cleanup --report-dir "$BUILD_REPORT_DIR"',
+                        returnStatus: true
+                    )
+                } else {
+                    echo 'Sin despliegue propio; no se ejecuta Docker cleanup.'
+                }
                 def junitReport = 'reports/unit/junit.xml'
                 def coverageReport = 'reports/unit/coverage.xml'
                 def integrationReport = 'reports/integration/junit.xml'
                 def notificationReport = 'reports/notifications/junit.xml'
                 def e2eReport = 'reports/e2e/junit.xml'
-                def buildReports = 'reports/build/*.txt'
+                def buildReports = 'reports/build/**'
                 def reports = [junitReport, coverageReport, integrationReport, e2eReport, notificationReport].findAll {
                     fileExists(it)
                 }
@@ -310,6 +313,9 @@ pipeline {
                     allowEmptyArchive: true,
                     fingerprint: true
                 )
+                if (cleanupStatus != 0) {
+                    error('Falló el cleanup del build; no se borraron recursos sin propiedad comprobada.')
+                }
             }
         }
     }

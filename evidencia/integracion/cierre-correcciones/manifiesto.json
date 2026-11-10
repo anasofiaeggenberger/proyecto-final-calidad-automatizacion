@@ -1,0 +1,75 @@
+{
+  "fecha": "2026-11-09T21:03:58.517287-06:00",
+  "sha_base": "ae5cab5889cc7b318423b1cc76cfa7740df309d0",
+  "fuente": "base mas cambios de este commit, comparar hashes con HEAD final",
+  "fuentes_sha256": {
+    "domain/patient_queue.py": "b365f1825a7fc375b083bf22a19fd1e8e5e1747371b0f00c5dda6bce46ab344b",
+    "app.py": "f8075e2e06cf6165369fd22a255ea18490cf61cb5b50a705c9f42ade63bdb849",
+    "docker-compose.yml": "eeccdb30c34d0069ba87cfdc17269790879e1c84c60c15371809784dc23e47d9",
+    "Jenkinsfile": "1c290331930288d7e703c127eeb252ddb6be01801e117f0d5190055ccdc0759d",
+    "scripts/gestionar_ambiente.py": "97676b10644f329ddccd027f2ff09d21764fe6e52e70de2ee988fe2814e97406",
+    "scripts/auditar_concurrencia.py": "be16cc55b3d2519cd505aedce4a30636cbe798393534f42efa7162d9cbf5ed2d",
+    "tests/unit/test_queue_concurrency.py": "f373d2952fa254d1423c397b9024a8510da79db7fd12ead4fa0eaa419a6d7760",
+    "tests/unit/test_app_config.py": "c62ba7eb12fdfa44a7bdc27debe376cb014a9d0f8393e0b2ec0a55ed5cc08461",
+    "tests/pipeline/test_deployment.py": "eca1d0014ab3d0d248003e8726619dae951ef5479a5a95447995a48f3685b5c0"
+  },
+  "resultados": {
+    "unit-pipeline.xml": {
+      "tests": 102,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "integracion-ci.xml": {
+      "tests": 71,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "integracion-staging.xml": {
+      "tests": 71,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "e2e-ci-regression": {
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "e2e-staging-regression": {
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "e2e-staging-smoke": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "e2e-ci-smoke": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "total_ejecuciones_aprobadas": 280,
+  "coverage_percent": 99.19,
+  "health_gate": "Solo cambia la URL a la devuelta por Docker; captura y salida preservadas",
+  "bloques_shell_validos": 19,
+  "declarative_jenkins": "No validado: se detuvo instalacion de plugins tras fallos del mirror, sin afectar el Jenkins del equipo",
+  "correo_real_enviado": false,
+  "ambientes": "ci y staging en dos proyectos Docker simultaneos, puertos loopback dinamicos",
+  "navegadores": {
+    "ci": "chromium",
+    "staging": "firefox"
+  },
+  "suites": [
+    "smoke",
+    "regression"
+  ]
+}

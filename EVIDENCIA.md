@@ -1,5 +1,9 @@
 # Evidencia de ejecución
 
+> **Estado actualizado:** concurrencia y aislamiento entre builds corregidos y probados.
+> Ver [cierre de correcciones](docs/CIERRE_CORRECCIONES.md). Los estados anteriores se conservan como historial;
+> quedan únicamente las comprobaciones externas de Jenkins/SMTP y la entrega del equipo.
+
 Documento compartido del equipo. Cada integrante mantiene su propia sección y sus archivos en
 `evidencia/`.
 
@@ -7,10 +11,11 @@ Documento compartido del equipo. Cada integrante mantiene su propia sección y s
 
 | Capa | Responsable | Casos | Estado |
 |---|---|---:|---|
-| Unitarias | Ana Sofía | 59 | verde (cobertura 99.12 %, umbral 90 %) |
+| Unitarias | Ana Sofía y corrección concurrente | 67 | verde (cobertura 99.19 %, umbral 90 %) |
 | Integración HTTP | Juan Pablo | 71 (3 marcados `smoke`) | verde contra el contenedor desplegado |
 | E2E Playwright | Víctor | 17 (1 marcado smoke) | verde en Chromium y Firefox; también contra Docker |
-| Notificaciones | Víctor | 22 | verde local en auditoría PR8, sin envío real |
+| Notificaciones | Víctor | 22 | verde local, sin envío real |
+| Soporte de despliegue | Víctor | 13 | verde; propiedad y cleanup |
 
 ---
 

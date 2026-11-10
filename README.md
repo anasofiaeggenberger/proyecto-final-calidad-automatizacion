@@ -1,5 +1,9 @@
 # Cola hospitalaria
 
+> **Estado actualizado:** concurrencia y aislamiento entre builds corregidos y probados.
+> Ver [cierre de correcciones](docs/CIERRE_CORRECCIONES.md). Los estados anteriores se conservan como historial;
+> quedan únicamente las comprobaciones externas de Jenkins/SMTP y la entrega del equipo.
+
 Dashboard Flask para gestionar la atención de pacientes mediante una cola de prioridad. La interfaz principal permite registrar, listar, atender y eliminar pacientes, mostrando primero los niveles de urgencia más altos y respetando el orden de llegada cuando existe empate.
 
 ## Funcionalidades actuales

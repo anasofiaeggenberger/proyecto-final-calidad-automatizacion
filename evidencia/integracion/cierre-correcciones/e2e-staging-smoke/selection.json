@@ -1,0 +1,6 @@
+{
+  "suite": "smoke",
+  "browser": "firefox",
+  "commit": "ae5cab5889cc7b318423b1cc76cfa7740df309d0",
+  "url": "http://127.0.0.1:55002"
+}

@@ -1,0 +1,10 @@
+{
+  "tecnica": "16 threads; altas, lecturas y retiros reales sobre una cola aislada",
+  "pacientes": 400,
+  "ids_unicos": true,
+  "llegadas_unicas": true,
+  "prioridad_fifo": true,
+  "atender": true,
+  "eliminar_id": true,
+  "eliminar_nombre": true
+}

@@ -1,5 +1,9 @@
 # Revisión de ramas y pendientes
 
+> **Estado actualizado:** concurrencia y aislamiento entre builds corregidos y probados.
+> Ver [cierre de correcciones](CIERRE_CORRECCIONES.md). Los estados anteriores se conservan como historial;
+> quedan únicamente las comprobaciones externas de Jenkins/SMTP y la entrega del equipo.
+
 Revisión del 9 de noviembre de 2026, tras git fetch origin. Se compararon los archivos e
 historiales de todas las ramas remotas; no se modificó main ni se abrió un PR.
 

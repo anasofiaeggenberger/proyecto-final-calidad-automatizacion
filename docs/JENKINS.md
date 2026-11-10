@@ -1,5 +1,9 @@
 # Jenkins y notificaciones
 
+> **Estado actualizado:** concurrencia y aislamiento entre builds corregidos y probados.
+> Ver [cierre de correcciones](CIERRE_CORRECCIONES.md). Los estados anteriores se conservan como historial;
+> quedan únicamente las comprobaciones externas de Jenkins/SMTP y la entrega del equipo.
+
 ## Requisitos del agente
 
 Python 3.12, python3 en PATH para el correo, uv, Git, Docker Engine y Compose v2.
@@ -13,9 +17,9 @@ a mano en la UI. pollSCM revisa cambios cada dos minutos; la primera ejecución 
 parámetros y activa el trigger. La rama de entrega es feat/victor-e2e-playwright; la demo
 de fallos usa otro job/rama demo/ para no romperla.
 
-Compose usa nombres/puertos fijos heredados: hospital-api-ci:8001 y
-hospital-api-staging:8002. No lanzar dos jobs del proyecto a la vez en el mismo daemon.
-disableConcurrentBuilds evita solapamientos del mismo job. El post apaga ambos ambientes.
+CI genera un proyecto hospital-build-<UUID> y puertos de loopback asignados por Docker.
+El helper gestionar_ambiente.py devuelve la URL y el post sólo limpia ese proyecto tras
+verificar etiquetas de propiedad. Los comandos manuales de Compose conservan 8001/8002.
 
 ## Parámetros y gates
 

@@ -1,0 +1,1 @@
+health http://127.0.0.1:55002/api/health -> {"ambiente": "staging", "estado": "ok", "version": "ae5cab5889cc7b318423b1cc76cfa7740df309d0"}
