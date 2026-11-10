@@ -112,7 +112,7 @@ Para ejecutar los ambientes locales se necesita Docker Engine con Docker Compose
 
 El agente Jenkins necesita Python 3.12, <code>python3</code>, <code>uv</code>, Git, Docker Engine, Compose v2, acceso controlado al daemon Docker y un workspace aislado. También requiere los plugins Pipeline/Declarative, Git, JUnit, Credentials Binding y HTML Publisher.
 
-El repositorio no contiene una imagen de agente Jenkins. Las bibliotecas del sistema necesarias para Chromium y Firefox deben estar preparadas en el agente o en una imagen de infraestructura aprobada. La configuración completa está en [docs/JENKINS.md](docs/JENKINS.md).
+El repositorio incluye una receta versionada de infraestructura Jenkins en `infra/jenkins/Dockerfile`, `infra/jenkins/plugins.txt` y `docker-compose.jenkins.yml`. La imagen fue construida y Firefox se comprobó en un contenedor aislado; esto no equivale a demostrar una instalación Jenkins completamente limpia desde cero. La configuración completa está en [docs/JENKINS.md](docs/JENKINS.md).
 
 ### SMTP
 
@@ -438,7 +438,7 @@ Parámetros disponibles:
 | <code>BROWSER</code> | <code>chromium</code>, <code>firefox</code> | Cambia el navegador E2E |
 | <code>NOTIFY_EMAILS</code> | Destinatarios editables | Define los destinatarios de la notificación |
 
-El agente no puede asumirse como un Jenkins limpio: requiere las herramientas y librerías del navegador indicadas en [docs/JENKINS.md](docs/JENKINS.md). El repositorio no contiene una imagen versionada de agente Jenkins.
+El agente puede construirse con la receta versionada de `infra/jenkins/` y `docker-compose.jenkins.yml`, pero no puede asumirse como un Jenkins limpio ya validado: requiere las herramientas, librerías y configuración indicadas en [docs/JENKINS.md](docs/JENKINS.md). La construcción de la imagen y la comprobación aislada de Firefox no sustituyen una ejecución Jenkins desde cero.
 
 SMTP utiliza Credentials Binding (<code>smtp-config</code> y <code>smtp-auth</code>) y variables inyectadas. No almacenar credenciales en Git ni en argumentos o logs. La implementación y las pruebas locales no equivalen a una prueba de entrega en un buzón real.
 

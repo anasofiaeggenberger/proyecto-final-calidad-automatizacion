@@ -1,9 +1,10 @@
 # Estado del proyecto y pendientes
 
-> **Estado actual:** `main` está en `fdceef069d2a2c33894f0982d1dde38b90330e1f` y los defectos
-> de eliminación HTML por nombre están corregidos. Esta página conserva una revisión de ramas
-> del 9 de noviembre como historial; las ejecuciones Jenkins actuales se documentan con sus
-> límites en `EVIDENCIA.md`.
+> **Estado de ejecución Jenkins:** los Builds #4, #5 y #6 utilizaron el commit
+> `fdceef069d2a2c33894f0982d1dde38b90330e1f`. El commit de entrega es posterior e incorpora
+> correcciones documentales e infraestructura; esta página conserva la separación entre ambos.
+> Los defectos de eliminación HTML por nombre están corregidos y los límites de las ejecuciones
+> Jenkins se documentan en `EVIDENCIA.md`.
 
 Revisión histórica del 9 de noviembre de 2026, tras `git fetch origin`. Se compararon los archivos
 e historiales de las ramas remotas; esa revisión no modificó `main` ni abrió un PR.
@@ -41,10 +42,11 @@ su trabajo. La aplicación de negocio y el contrato API no cambian por las prueb
 - Configurar SMTP con credenciales autorizadas y acreditar recepción real del correo.
 - Completar la evidencia de Jenkins verde/rojo/verde intencional y timeout; no se afirma que ya
   haya ocurrido.
-- Elegir el tag final y el commit integrado del equipo, y entregar archivo MIU con URL/tag/SHA.
+- Identificar el commit de entrega mediante un tag público y un archivo MIU con URL, tag y SHA.
 
-La instancia temporal ejecutó los Builds #4, #5 y #6 sobre el SHA actual; eso no equivale a un
-build Jenkins limpio desde la receta versionada ni a un correo recibido.
+La instancia temporal ejecutó los Builds #4, #5 y #6 sobre el commit de ejecución
+`fdceef069d2a2c33894f0982d1dde38b90330e1f`; ese SHA no es necesariamente el commit de entrega.
+Esto no equivale a un build Jenkins limpio desde la receta versionada ni a un correo recibido.
 
 ## Actualización de auditoría PR #8
 

@@ -1,11 +1,12 @@
 # Evidencia de ejecución
 
-> **Estado documental:** `main` está en `fdceef069d2a2c33894f0982d1dde38b90330e1f`.
-> Este documento separa ejecuciones Jenkins reales, resultados locales, evidencia histórica y
-> comprobaciones aún pendientes. Un reporte, captura o archivo XML no demuestra por sí solo que
-> un `HEAD` distinto haya sido ejecutado por Jenkins.
+> **Estado documental:** los Builds #4, #5 y #6 ejecutaron el commit
+> `fdceef069d2a2c33894f0982d1dde38b90330e1f`. Este documento separa ese commit de ejecución del
+> commit posterior de entrega, que incorpora correcciones documentales e infraestructura. Un
+> reporte, captura o archivo XML no demuestra por sí solo que un `HEAD` distinto haya sido
+> ejecutado por Jenkins.
 
-## 1. Ejecuciones Jenkins reales sobre el HEAD actual
+## 1. Ejecuciones Jenkins verificadas sobre el commit de ejecución
 
 Los artefactos de Build #4, #5 y #6 conservan el commit completo
 `fdceef069d2a2c33894f0982d1dde38b90330e1f` en `reports/build/artefacto.txt`. Los resultados y
